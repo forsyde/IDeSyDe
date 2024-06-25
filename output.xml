@@ -1,616 +1,603 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<robot generator="Robot 6.1.1 (Python 3.11.2 on linux)" generated="20240605 16:07:03.245" rpa="false" schemaversion="4">
+<robot generator="Robot 6.1.1 (Python 3.11.2 on linux)" generated="20240625 14:42:00.884" rpa="false" schemaversion="4">
 <suite id="s1" name="TestsBenchmark" source="/home/rjordao/gits/IDeSyDe/TestsBenchmark.robot">
 <test id="s1-t1" name="Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel" line="10">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/a_sobel/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:07.805" level="INFO">[90m[[0m2024-06-05T14:07:03Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:07.805" level="INFO">[90m[[0m2024-06-05T14:07:03Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:07.805" level="INFO">[90m[[0m2024-06-05T14:07:04Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:07.805" level="INFO">[90m[[0m2024-06-05T14:07:04Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Identified 20 decision model(s)</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:07.806" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:03.342" endtime="20240605 16:07:07.806"/>
+<msg timestamp="20240625 14:42:05.617" level="INFO">[90m[[0m2024-06-25T12:42:01Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:05.617" level="INFO">[90m[[0m2024-06-25T12:42:01Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:05.618" level="INFO">[90m[[0m2024-06-25T12:42:02Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:05.618" level="INFO">[90m[[0m2024-06-25T12:42:02Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:05.619" level="INFO">[90m[[0m2024-06-25T12:42:04Z [32mINFO [0m[90m][0m Identified 20 decision model(s)</msg>
+<msg timestamp="20240625 14:42:05.619" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:05.619" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:05.619" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:05.620" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:05.620" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:42:05.620" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:00.977" endtime="20240625 14:42:05.620"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:07.807" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:05.621" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:07.807" endtime="20240605 16:07:07.807"/>
+<status status="PASS" starttime="20240625 14:42:05.621" endtime="20240625 14:42:05.621"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:03.341" endtime="20240605 16:07:07.807"/>
+<status status="PASS" starttime="20240625 14:42:00.976" endtime="20240625 14:42:05.622"/>
 </test>
 <test id="s1-t2" name="Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta" line="14">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:12.681" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:12.681" level="INFO">[90m[[0m2024-06-05T14:07:07Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:12.681" level="INFO">[90m[[0m2024-06-05T14:07:09Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:12.681" level="INFO">[90m[[0m2024-06-05T14:07:09Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:11Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:12.682" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:12.683" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:07.808" endtime="20240605 16:07:12.683"/>
+<msg timestamp="20240625 14:42:12.772" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:12.772" level="INFO">[90m[[0m2024-06-25T12:42:05Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:12.773" level="INFO">[90m[[0m2024-06-25T12:42:07Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:12.773" level="INFO">[90m[[0m2024-06-25T12:42:07Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:10Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:10Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:10Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:12Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:12Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:12.774" level="INFO">[90m[[0m2024-06-25T12:42:12Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:42:12.775" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:05.623" endtime="20240625 14:42:12.775"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:12.683" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:12.776" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:12.683" endtime="20240605 16:07:12.684"/>
+<status status="PASS" starttime="20240625 14:42:12.775" endtime="20240625 14:42:12.776"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:07.808" endtime="20240605 16:07:12.684"/>
+<status status="PASS" starttime="20240625 14:42:05.622" endtime="20240625 14:42:12.776"/>
 </test>
 <test id="s1-t3" name="Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta_d_jpegEnc1" line="19">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_c_rasta_d_jpegEnc1/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:18.516" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:18.517" level="INFO">[90m[[0m2024-06-05T14:07:12Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:18.517" level="INFO">[90m[[0m2024-06-05T14:07:14Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:18.517" level="INFO">[90m[[0m2024-06-05T14:07:14Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:17Z [32mINFO [0m[90m][0m Identified 23 decision model(s)</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:17Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:17Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:18Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:18Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">[90m[[0m2024-06-05T14:07:18Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:18.518" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:12.685" endtime="20240605 16:07:18.518"/>
+<msg timestamp="20240625 14:42:20.079" level="INFO">[90m[[0m2024-06-25T12:42:12Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:20.079" level="INFO">[90m[[0m2024-06-25T12:42:12Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:20.079" level="INFO">[90m[[0m2024-06-25T12:42:14Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:20.079" level="INFO">[90m[[0m2024-06-25T12:42:14Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:20.079" level="INFO">[90m[[0m2024-06-25T12:42:17Z [32mINFO [0m[90m][0m Identified 23 decision model(s)</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">[90m[[0m2024-06-25T12:42:17Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">[90m[[0m2024-06-25T12:42:17Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">[90m[[0m2024-06-25T12:42:20Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">[90m[[0m2024-06-25T12:42:20Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">[90m[[0m2024-06-25T12:42:20Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:42:20.080" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:12.778" endtime="20240625 14:42:20.080"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:18.519" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:20.081" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:18.518" endtime="20240605 16:07:18.519"/>
+<status status="PASS" starttime="20240625 14:42:20.080" endtime="20240625 14:42:20.081"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:12.684" endtime="20240605 16:07:18.519"/>
+<status status="PASS" starttime="20240625 14:42:12.777" endtime="20240625 14:42:20.081"/>
 </test>
 <test id="s1-t4" name="Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_d_jpegEnc1" line="24">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/a_sobel_b_susan_d_jpegEnc1/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:23.853" level="INFO">[90m[[0m2024-06-05T14:07:18Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:23.854" level="INFO">[90m[[0m2024-06-05T14:07:18Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:23.854" level="INFO">[90m[[0m2024-06-05T14:07:19Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:23.854" level="INFO">[90m[[0m2024-06-05T14:07:19Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:22Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:23.855" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:18.520" endtime="20240605 16:07:23.855"/>
+<msg timestamp="20240625 14:42:26.648" level="INFO">[90m[[0m2024-06-25T12:42:20Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:26.648" level="INFO">[90m[[0m2024-06-25T12:42:20Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:26.648" level="INFO">[90m[[0m2024-06-25T12:42:21Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:26.648" level="INFO">[90m[[0m2024-06-25T12:42:21Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:24Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:24Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:24Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:26Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:26Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">[90m[[0m2024-06-25T12:42:26Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:42:26.650" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:20.082" endtime="20240625 14:42:26.650"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:23.856" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:26.651" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:23.856" endtime="20240605 16:07:23.856"/>
+<status status="PASS" starttime="20240625 14:42:26.651" endtime="20240625 14:42:26.652"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:18.520" endtime="20240605 16:07:23.857"/>
+<status status="PASS" starttime="20240625 14:42:20.081" endtime="20240625 14:42:26.652"/>
 </test>
 <test id="s1-t5" name="Test for examples_and_benchmarks/CODES_ISSS_2023/a_sobel_c_rasta_d_jpegEnc1" line="29">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/a_sobel_c_rasta_d_jpegEnc1/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:29.021" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:29.022" level="INFO">[90m[[0m2024-06-05T14:07:23Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:29.022" level="INFO">[90m[[0m2024-06-05T14:07:25Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:29.022" level="INFO">[90m[[0m2024-06-05T14:07:25Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:27Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:28Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:28Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:28Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:28Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:29.023" level="INFO">[90m[[0m2024-06-05T14:07:28Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:29.024" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:23.858" endtime="20240605 16:07:29.024"/>
+<msg timestamp="20240625 14:42:33.730" level="INFO">[90m[[0m2024-06-25T12:42:26Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:33.730" level="INFO">[90m[[0m2024-06-25T12:42:26Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:33.731" level="INFO">[90m[[0m2024-06-25T12:42:28Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:33.731" level="INFO">[90m[[0m2024-06-25T12:42:28Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:33.732" level="INFO">[90m[[0m2024-06-25T12:42:31Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
+<msg timestamp="20240625 14:42:33.732" level="INFO">[90m[[0m2024-06-25T12:42:31Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:33.732" level="INFO">[90m[[0m2024-06-25T12:42:31Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:33.733" level="INFO">[90m[[0m2024-06-25T12:42:33Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:33.733" level="INFO">[90m[[0m2024-06-25T12:42:33Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:33.733" level="INFO">[90m[[0m2024-06-25T12:42:33Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:42:33.733" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:26.653" endtime="20240625 14:42:33.733"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:29.024" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:33.734" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:29.024" endtime="20240605 16:07:29.024"/>
+<status status="PASS" starttime="20240625 14:42:33.734" endtime="20240625 14:42:33.734"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:23.857" endtime="20240605 16:07:29.025"/>
+<status status="PASS" starttime="20240625 14:42:26.653" endtime="20240625 14:42:33.735"/>
 </test>
 <test id="s1-t6" name="Test for examples_and_benchmarks/CODES_ISSS_2023/b_susan_c_rasta_d_jpegEnc1" line="34">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/b_susan_c_rasta_d_jpegEnc1/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:34.412" level="INFO">[90m[[0m2024-06-05T14:07:29Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:34.412" level="INFO">[90m[[0m2024-06-05T14:07:29Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:34.412" level="INFO">[90m[[0m2024-06-05T14:07:30Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:34.412" level="INFO">[90m[[0m2024-06-05T14:07:30Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:33Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:33Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:33Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:34Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:34Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">[90m[[0m2024-06-05T14:07:34Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:34.413" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:29.026" endtime="20240605 16:07:34.413"/>
+<msg timestamp="20240625 14:42:43.640" level="INFO">[90m[[0m2024-06-25T12:42:33Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:43.640" level="INFO">[90m[[0m2024-06-25T12:42:33Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:43.641" level="INFO">[90m[[0m2024-06-25T12:42:35Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:43.641" level="INFO">[90m[[0m2024-06-25T12:42:35Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:43.643" level="INFO">[90m[[0m2024-06-25T12:42:38Z [32mINFO [0m[90m][0m Identified 22 decision model(s)</msg>
+<msg timestamp="20240625 14:42:43.643" level="INFO">[90m[[0m2024-06-25T12:42:38Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:43.644" level="INFO">[90m[[0m2024-06-25T12:42:38Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:43.644" level="INFO">[90m[[0m2024-06-25T12:42:42Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:43.644" level="INFO">[90m[[0m2024-06-25T12:42:42Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:43.644" level="INFO">[90m[[0m2024-06-25T12:42:43Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:42:43.644" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:33.736" endtime="20240625 14:42:43.644"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:34.414" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:43.645" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:34.414" endtime="20240605 16:07:34.414"/>
+<status status="PASS" starttime="20240625 14:42:43.645" endtime="20240625 14:42:43.645"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:29.025" endtime="20240605 16:07:34.414"/>
+<status status="PASS" starttime="20240625 14:42:33.735" endtime="20240625 14:42:43.646"/>
 </test>
 <test id="s1-t7" name="Test for examples_and_benchmarks/CODES_ISSS_2023/c_rasta_d_jpegEnc1" line="39">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/c_rasta_d_jpegEnc1/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:39.473" level="INFO">[90m[[0m2024-06-05T14:07:34Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:39.473" level="INFO">[90m[[0m2024-06-05T14:07:34Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:39.473" level="INFO">[90m[[0m2024-06-05T14:07:35Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:39.473" level="INFO">[90m[[0m2024-06-05T14:07:35Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:39.474" level="INFO">[90m[[0m2024-06-05T14:07:38Z [32mINFO [0m[90m][0m Identified 21 decision model(s)</msg>
-<msg timestamp="20240605 16:07:39.474" level="INFO">[90m[[0m2024-06-05T14:07:38Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:39.474" level="INFO">[90m[[0m2024-06-05T14:07:38Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:39.474" level="INFO">[90m[[0m2024-06-05T14:07:39Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:39.474" level="INFO">[90m[[0m2024-06-05T14:07:39Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:39.475" level="INFO">[90m[[0m2024-06-05T14:07:39Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:39.475" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:34.415" endtime="20240605 16:07:39.475"/>
+<msg timestamp="20240625 14:42:53.131" level="INFO">[90m[[0m2024-06-25T12:42:43Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:42:53.131" level="INFO">[90m[[0m2024-06-25T12:42:43Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:42:53.131" level="INFO">[90m[[0m2024-06-25T12:42:45Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:42:53.131" level="INFO">[90m[[0m2024-06-25T12:42:45Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:42:53.133" level="INFO">[90m[[0m2024-06-25T12:42:48Z [32mINFO [0m[90m][0m Identified 21 decision model(s)</msg>
+<msg timestamp="20240625 14:42:53.133" level="INFO">[90m[[0m2024-06-25T12:42:49Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:42:53.133" level="INFO">[90m[[0m2024-06-25T12:42:49Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:42:53.133" level="INFO">[90m[[0m2024-06-25T12:42:52Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:42:53.133" level="INFO">[90m[[0m2024-06-25T12:42:52Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:42:53.134" level="INFO">[90m[[0m2024-06-25T12:42:53Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:42:53.134" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:43.647" endtime="20240625 14:42:53.134"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:39.476" level="INFO">Argument types are:
+<msg timestamp="20240625 14:42:53.135" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:39.475" endtime="20240605 16:07:39.476"/>
+<status status="PASS" starttime="20240625 14:42:53.134" endtime="20240625 14:42:53.135"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:34.415" endtime="20240605 16:07:39.476"/>
+<status status="PASS" starttime="20240625 14:42:43.646" endtime="20240625 14:42:53.136"/>
 </test>
 <test id="s1-t8" name="Test for examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl" line="44">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl/idesyde_input.fiodl</arg>
-<msg timestamp="20240605 16:07:44.068" level="INFO">[90m[[0m2024-06-05T14:07:39Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:44.068" level="INFO">[90m[[0m2024-06-05T14:07:39Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:44.068" level="INFO">[90m[[0m2024-06-05T14:07:40Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:44.068" level="INFO">[90m[[0m2024-06-05T14:07:40Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:43Z [32mINFO [0m[90m][0m Identified 20 decision model(s)</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:43Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:43Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:43Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:43Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">[90m[[0m2024-06-05T14:07:44Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:44.069" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:39.477" endtime="20240605 16:07:44.070"/>
+<msg timestamp="20240625 14:42:59.409" level="FAIL">CalledProcessError: Command '['./idesyde', '--run-path', 'test_runs', '--x-max-solutions', '1', '--x-improvement-time-out', '60', '-p', '20', '-v', 'DEBUG', 'examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl/idesyde_input.fiodl']' died with &lt;Signals.SIGABRT: 6&gt;.</msg>
+<status status="FAIL" starttime="20240625 14:42:53.138" endtime="20240625 14:42:59.412"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:44.070" level="INFO">Argument types are:
-&lt;class 'int'&gt;
-&lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:44.070" endtime="20240605 16:07:44.070"/>
+<status status="NOT RUN" starttime="20240625 14:42:59.413" endtime="20240625 14:42:59.413"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:39.476" endtime="20240605 16:07:44.071"/>
+<status status="FAIL" starttime="20240625 14:42:53.137" endtime="20240625 14:42:59.413">CalledProcessError: Command '['./idesyde', '--run-path', 'test_runs', '--x-max-solutions', '1', '--x-improvement-time-out', '60', '-p', '20', '-v', 'DEBUG', 'examples_and_benchmarks/CODES_ISSS_2023/g10_3_cycl/idesyde_input.fiodl']' died with &lt;Signals.SIGABRT: 6&gt;.</status>
 </test>
 <test id="s1-t9" name="Test for examples_and_benchmarks/DASC2023/flight-information-function-50" line="88">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/flight-information-function-50</arg>
-<msg timestamp="20240605 16:07:48.229" level="INFO">[90m[[0m2024-06-05T14:07:44Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:48.230" level="INFO">[90m[[0m2024-06-05T14:07:44Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:48.230" level="INFO">[90m[[0m2024-06-05T14:07:45Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:48.230" level="INFO">[90m[[0m2024-06-05T14:07:45Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:48.231" level="INFO">[90m[[0m2024-06-05T14:07:47Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">[90m[[0m2024-06-05T14:07:47Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">[90m[[0m2024-06-05T14:07:47Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">[90m[[0m2024-06-05T14:07:48Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">[90m[[0m2024-06-05T14:07:48Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">[90m[[0m2024-06-05T14:07:48Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:48.232" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:44.071" endtime="20240605 16:07:48.232"/>
+<msg timestamp="20240625 14:43:05.600" level="INFO">[90m[[0m2024-06-25T12:42:59Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:05.600" level="INFO">[90m[[0m2024-06-25T12:42:59Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:05.600" level="INFO">[90m[[0m2024-06-25T12:43:01Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:05.600" level="INFO">[90m[[0m2024-06-25T12:43:01Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:03Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:03Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:03Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:05Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:05Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">[90m[[0m2024-06-25T12:43:05Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:43:05.601" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:42:59.414" endtime="20240625 14:43:05.601"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:48.233" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:05.602" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:48.233" endtime="20240605 16:07:48.233"/>
+<status status="PASS" starttime="20240625 14:43:05.602" endtime="20240625 14:43:05.602"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:44.071" endtime="20240605 16:07:48.234"/>
+<status status="PASS" starttime="20240625 14:42:59.414" endtime="20240625 14:43:05.602"/>
 </test>
 <test id="s1-t10" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1" line="114">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1</arg>
-<msg timestamp="20240605 16:07:50.923" level="INFO">[90m[[0m2024-06-05T14:07:48Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:50.924" level="INFO">[90m[[0m2024-06-05T14:07:48Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:50.924" level="INFO">[90m[[0m2024-06-05T14:07:49Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:50.924" level="INFO">[90m[[0m2024-06-05T14:07:49Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:50.925" level="INFO">[90m[[0m2024-06-05T14:07:50Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
-<msg timestamp="20240605 16:07:50.925" level="INFO">[90m[[0m2024-06-05T14:07:50Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
-<msg timestamp="20240605 16:07:50.926" level="INFO">[90m[[0m2024-06-05T14:07:50Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
-<msg timestamp="20240605 16:07:50.926" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:07:48.235" endtime="20240605 16:07:50.926"/>
+<msg timestamp="20240625 14:43:09.415" level="INFO">[90m[[0m2024-06-25T12:43:05Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:09.415" level="INFO">[90m[[0m2024-06-25T12:43:05Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:09.415" level="INFO">[90m[[0m2024-06-25T12:43:07Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:09.415" level="INFO">[90m[[0m2024-06-25T12:43:07Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:09.416" level="INFO">[90m[[0m2024-06-25T12:43:09Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
+<msg timestamp="20240625 14:43:09.416" level="INFO">[90m[[0m2024-06-25T12:43:09Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
+<msg timestamp="20240625 14:43:09.416" level="INFO">[90m[[0m2024-06-25T12:43:09Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
+<msg timestamp="20240625 14:43:09.416" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:05.603" endtime="20240625 14:43:09.416"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:50.927" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:09.417" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:50.926" endtime="20240605 16:07:50.927"/>
+<status status="PASS" starttime="20240625 14:43:09.416" endtime="20240625 14:43:09.417"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:48.234" endtime="20240605 16:07:50.927"/>
+<status status="PASS" starttime="20240625 14:43:05.603" endtime="20240625 14:43:09.417"/>
 </test>
 <test id="s1-t11" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-12_5" line="118">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-12_5</arg>
-<msg timestamp="20240605 16:07:53.650" level="INFO">[90m[[0m2024-06-05T14:07:50Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:53.650" level="INFO">[90m[[0m2024-06-05T14:07:50Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:53.651" level="INFO">[90m[[0m2024-06-05T14:07:52Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:53.651" level="INFO">[90m[[0m2024-06-05T14:07:52Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:53.652" level="INFO">[90m[[0m2024-06-05T14:07:53Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
-<msg timestamp="20240605 16:07:53.652" level="INFO">[90m[[0m2024-06-05T14:07:53Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
-<msg timestamp="20240605 16:07:53.652" level="INFO">[90m[[0m2024-06-05T14:07:53Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
-<msg timestamp="20240605 16:07:53.652" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:07:50.929" endtime="20240605 16:07:53.653"/>
+<msg timestamp="20240625 14:43:13.086" level="INFO">[90m[[0m2024-06-25T12:43:09Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:13.086" level="INFO">[90m[[0m2024-06-25T12:43:09Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:13.086" level="INFO">[90m[[0m2024-06-25T12:43:11Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:13.086" level="INFO">[90m[[0m2024-06-25T12:43:11Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:13.087" level="INFO">[90m[[0m2024-06-25T12:43:12Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
+<msg timestamp="20240625 14:43:13.087" level="INFO">[90m[[0m2024-06-25T12:43:13Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
+<msg timestamp="20240625 14:43:13.087" level="INFO">[90m[[0m2024-06-25T12:43:13Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
+<msg timestamp="20240625 14:43:13.088" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:09.418" endtime="20240625 14:43:13.088"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:53.653" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:13.089" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:53.653" endtime="20240605 16:07:53.654"/>
+<status status="PASS" starttime="20240625 14:43:13.088" endtime="20240625 14:43:13.089"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:50.928" endtime="20240605 16:07:53.654"/>
+<status status="PASS" starttime="20240625 14:43:09.417" endtime="20240625 14:43:13.089"/>
 </test>
 <test id="s1-t12" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-25" line="122">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-25</arg>
-<msg timestamp="20240605 16:07:56.377" level="INFO">[90m[[0m2024-06-05T14:07:53Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:56.377" level="INFO">[90m[[0m2024-06-05T14:07:53Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:56.377" level="INFO">[90m[[0m2024-06-05T14:07:54Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:56.377" level="INFO">[90m[[0m2024-06-05T14:07:54Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:56.379" level="INFO">[90m[[0m2024-06-05T14:07:56Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
-<msg timestamp="20240605 16:07:56.379" level="INFO">[90m[[0m2024-06-05T14:07:56Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
-<msg timestamp="20240605 16:07:56.379" level="INFO">[90m[[0m2024-06-05T14:07:56Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
-<msg timestamp="20240605 16:07:56.379" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:07:53.656" endtime="20240605 16:07:56.379"/>
+<msg timestamp="20240625 14:43:16.691" level="INFO">[90m[[0m2024-06-25T12:43:13Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:16.691" level="INFO">[90m[[0m2024-06-25T12:43:13Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:16.691" level="INFO">[90m[[0m2024-06-25T12:43:14Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:16.692" level="INFO">[90m[[0m2024-06-25T12:43:14Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:16.693" level="INFO">[90m[[0m2024-06-25T12:43:16Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
+<msg timestamp="20240625 14:43:16.693" level="INFO">[90m[[0m2024-06-25T12:43:16Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
+<msg timestamp="20240625 14:43:16.693" level="INFO">[90m[[0m2024-06-25T12:43:16Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
+<msg timestamp="20240625 14:43:16.693" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:13.090" endtime="20240625 14:43:16.693"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:56.380" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:16.694" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:56.380" endtime="20240605 16:07:56.380"/>
+<status status="PASS" starttime="20240625 14:43:16.693" endtime="20240625 14:43:16.694"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:53.655" endtime="20240605 16:07:56.381"/>
+<status status="PASS" starttime="20240625 14:43:13.090" endtime="20240625 14:43:16.694"/>
 </test>
 <test id="s1-t13" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-3_125" line="126">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-3_125</arg>
-<msg timestamp="20240605 16:07:59.730" level="INFO">[90m[[0m2024-06-05T14:07:56Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:07:59.730" level="INFO">[90m[[0m2024-06-05T14:07:56Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:07:59.730" level="INFO">[90m[[0m2024-06-05T14:07:57Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:07:59.730" level="INFO">[90m[[0m2024-06-05T14:07:57Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:07:59.731" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:07:56.382" endtime="20240605 16:07:59.731"/>
+<msg timestamp="20240625 14:43:21.122" level="INFO">[90m[[0m2024-06-25T12:43:16Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:21.123" level="INFO">[90m[[0m2024-06-25T12:43:16Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:21.123" level="INFO">[90m[[0m2024-06-25T12:43:18Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:21.123" level="INFO">[90m[[0m2024-06-25T12:43:18Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:20Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:20Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:20Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:20Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:20Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">[90m[[0m2024-06-25T12:43:21Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:43:21.124" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:16.696" endtime="20240625 14:43:21.124"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:07:59.732" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:21.125" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:07:59.732" endtime="20240605 16:07:59.732"/>
+<status status="PASS" starttime="20240625 14:43:21.125" endtime="20240625 14:43:21.125"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:56.381" endtime="20240605 16:07:59.732"/>
+<status status="PASS" starttime="20240625 14:43:16.695" endtime="20240625 14:43:21.125"/>
 </test>
 <test id="s1-t14" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-50" line="131">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario1-50</arg>
-<msg timestamp="20240605 16:08:02.408" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:02.408" level="INFO">[90m[[0m2024-06-05T14:07:59Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:02.408" level="INFO">[90m[[0m2024-06-05T14:08:01Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:02.408" level="INFO">[90m[[0m2024-06-05T14:08:01Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:02.409" level="INFO">[90m[[0m2024-06-05T14:08:02Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
-<msg timestamp="20240605 16:08:02.409" level="INFO">[90m[[0m2024-06-05T14:08:02Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
-<msg timestamp="20240605 16:08:02.409" level="INFO">[90m[[0m2024-06-05T14:08:02Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
-<msg timestamp="20240605 16:08:02.409" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:07:59.733" endtime="20240605 16:08:02.409"/>
+<msg timestamp="20240625 14:43:24.607" level="INFO">[90m[[0m2024-06-25T12:43:21Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:24.608" level="INFO">[90m[[0m2024-06-25T12:43:21Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:24.608" level="INFO">[90m[[0m2024-06-25T12:43:22Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:24.608" level="INFO">[90m[[0m2024-06-25T12:43:22Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:24.608" level="INFO">[90m[[0m2024-06-25T12:43:24Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
+<msg timestamp="20240625 14:43:24.609" level="INFO">[90m[[0m2024-06-25T12:43:24Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
+<msg timestamp="20240625 14:43:24.609" level="INFO">[90m[[0m2024-06-25T12:43:24Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
+<msg timestamp="20240625 14:43:24.609" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:21.126" endtime="20240625 14:43:24.609"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:02.410" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:24.610" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:02.410" endtime="20240605 16:08:02.410"/>
+<status status="PASS" starttime="20240625 14:43:24.610" endtime="20240625 14:43:24.610"/>
 </kw>
-<status status="PASS" starttime="20240605 16:07:59.732" endtime="20240605 16:08:02.410"/>
+<status status="PASS" starttime="20240625 14:43:21.126" endtime="20240625 14:43:24.611"/>
 </test>
 <test id="s1-t15" name="Test for examples_and_benchmarks/DASC2023/radar-aesa-function-scenario2" line="141">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/DASC2023/radar-aesa-function-scenario2</arg>
-<msg timestamp="20240605 16:08:05.118" level="INFO">[90m[[0m2024-06-05T14:08:02Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:05.118" level="INFO">[90m[[0m2024-06-05T14:08:02Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:05.118" level="INFO">[90m[[0m2024-06-05T14:08:03Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:05.118" level="INFO">[90m[[0m2024-06-05T14:08:03Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:05.119" level="INFO">[90m[[0m2024-06-05T14:08:05Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
-<msg timestamp="20240605 16:08:05.120" level="INFO">[90m[[0m2024-06-05T14:08:05Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
-<msg timestamp="20240605 16:08:05.120" level="INFO">[90m[[0m2024-06-05T14:08:05Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
-<msg timestamp="20240605 16:08:05.120" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:08:02.411" endtime="20240605 16:08:05.120"/>
+<msg timestamp="20240625 14:43:28.014" level="INFO">[90m[[0m2024-06-25T12:43:24Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:28.014" level="INFO">[90m[[0m2024-06-25T12:43:24Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:28.014" level="INFO">[90m[[0m2024-06-25T12:43:26Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:28.014" level="INFO">[90m[[0m2024-06-25T12:43:26Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:28.015" level="INFO">[90m[[0m2024-06-25T12:43:27Z [32mINFO [0m[90m][0m Identified 9 decision model(s)</msg>
+<msg timestamp="20240625 14:43:28.015" level="INFO">[90m[[0m2024-06-25T12:43:27Z [32mINFO [0m[90m][0m Acquired 0 dominant bidding(s) out of 0 bidding(s)</msg>
+<msg timestamp="20240625 14:43:28.015" level="INFO">[90m[[0m2024-06-25T12:43:27Z [32mINFO [0m[90m][0m No dominant bidding to start exploration. Finished</msg>
+<msg timestamp="20240625 14:43:28.016" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:24.611" endtime="20240625 14:43:28.016"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:05.121" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:28.016" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:05.120" endtime="20240605 16:08:05.121"/>
+<status status="PASS" starttime="20240625 14:43:28.016" endtime="20240625 14:43:28.016"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:02.411" endtime="20240605 16:08:05.122"/>
+<status status="PASS" starttime="20240625 14:43:24.611" endtime="20240625 14:43:28.017"/>
 </test>
 <test id="s1-t16" name="Test for examples_and_benchmarks/PANORAMA/flight-information-function" line="150">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/PANORAMA/flight-information-function</arg>
-<msg timestamp="20240605 16:08:09.321" level="INFO">[90m[[0m2024-06-05T14:08:05Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:09.321" level="INFO">[90m[[0m2024-06-05T14:08:05Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:09.321" level="INFO">[90m[[0m2024-06-05T14:08:06Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:09.321" level="INFO">[90m[[0m2024-06-05T14:08:06Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:09.322" level="INFO">[90m[[0m2024-06-05T14:08:08Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
-<msg timestamp="20240605 16:08:09.322" level="INFO">[90m[[0m2024-06-05T14:08:08Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:08:09.322" level="INFO">[90m[[0m2024-06-05T14:08:08Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:09.323" level="INFO">[90m[[0m2024-06-05T14:08:09Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:09.323" level="INFO">[90m[[0m2024-06-05T14:08:09Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:08:09.323" level="INFO">[90m[[0m2024-06-05T14:08:09Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:08:09.323" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:08:05.123" endtime="20240605 16:08:09.323"/>
+<msg timestamp="20240625 14:43:33.486" level="INFO">[90m[[0m2024-06-25T12:43:28Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:33.487" level="INFO">[90m[[0m2024-06-25T12:43:28Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:33.487" level="INFO">[90m[[0m2024-06-25T12:43:29Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:33.487" level="INFO">[90m[[0m2024-06-25T12:43:29Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:31Z [32mINFO [0m[90m][0m Identified 10 decision model(s)</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:31Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:31Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:33Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:33Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:33.489" level="INFO">[90m[[0m2024-06-25T12:43:33Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:43:33.490" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:28.018" endtime="20240625 14:43:33.490"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:09.323" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:33.491" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:09.323" endtime="20240605 16:08:09.324"/>
+<status status="PASS" starttime="20240625 14:43:33.490" endtime="20240625 14:43:33.491"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:05.123" endtime="20240605 16:08:09.324"/>
+<status status="PASS" starttime="20240625 14:43:28.017" endtime="20240625 14:43:33.492"/>
 </test>
 <test id="s1-t17" name="Test for examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore" line="163">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/small_and_explainable/sobel_to_bus_multicore</arg>
-<msg timestamp="20240605 16:08:14.154" level="INFO">[90m[[0m2024-06-05T14:08:09Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:14.155" level="INFO">[90m[[0m2024-06-05T14:08:09Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:14.155" level="INFO">[90m[[0m2024-06-05T14:08:10Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:14.155" level="INFO">[90m[[0m2024-06-05T14:08:10Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:14.155" level="INFO">[90m[[0m2024-06-05T14:08:13Z [32mINFO [0m[90m][0m Identified 20 decision model(s)</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">[90m[[0m2024-06-05T14:08:13Z [32mINFO [0m[90m][0m Acquired 3 dominant bidding(s) out of 3 bidding(s)</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">[90m[[0m2024-06-05T14:08:13Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">[90m[[0m2024-06-05T14:08:14Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">[90m[[0m2024-06-05T14:08:14Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">[90m[[0m2024-06-05T14:08:14Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
-<msg timestamp="20240605 16:08:14.156" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:08:09.325" endtime="20240605 16:08:14.156"/>
+<msg timestamp="20240625 14:43:39.597" level="INFO">[90m[[0m2024-06-25T12:43:33Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:39.597" level="INFO">[90m[[0m2024-06-25T12:43:33Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:39.597" level="INFO">[90m[[0m2024-06-25T12:43:35Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:35Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:38Z [32mINFO [0m[90m][0m Identified 20 decision model(s)</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:38Z [32mINFO [0m[90m][0m Acquired 4 dominant bidding(s) out of 4 bidding(s)</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:38Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:39Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:39Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:39.598" level="INFO">[90m[[0m2024-06-25T12:43:39Z [32mINFO [0m[90m][0m Finished reverse identification of 1 design model(s)</msg>
+<msg timestamp="20240625 14:43:39.599" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:33.493" endtime="20240625 14:43:39.599"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:14.156" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:39.600" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:14.156" endtime="20240605 16:08:14.157"/>
+<status status="PASS" starttime="20240625 14:43:39.599" endtime="20240625 14:43:39.600"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:09.324" endtime="20240605 16:08:14.157"/>
+<status status="PASS" starttime="20240625 14:43:33.492" endtime="20240625 14:43:39.600"/>
 </test>
 <test id="s1-t18" name="Test for examples_and_benchmarks/novel/programmable_logic_area/tc1" line="178">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl,examples_and_benchmarks/novel/programmable_logic_area/tc1.fiodl</arg>
-<msg timestamp="20240605 16:08:18.085" level="INFO">[90m[[0m2024-06-05T14:08:14Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:18.085" level="INFO">[90m[[0m2024-06-05T14:08:14Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:18.085" level="INFO">[90m[[0m2024-06-05T14:08:15Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:18.085" level="INFO">[90m[[0m2024-06-05T14:08:15Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:18.087" level="INFO">[90m[[0m2024-06-05T14:08:17Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
-<msg timestamp="20240605 16:08:18.087" level="INFO">[90m[[0m2024-06-05T14:08:17Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:08:18.087" level="INFO">[90m[[0m2024-06-05T14:08:17Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:18.087" level="INFO">[90m[[0m2024-06-05T14:08:18Z [32mINFO [0m[90m][0m Finished exploration with 0 total and 0 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:18.087" level="INFO">[90m[[0m2024-06-05T14:08:18Z [32mINFO [0m[90m][0m No solution to reverse identify</msg>
-<msg timestamp="20240605 16:08:18.088" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:08:14.158" endtime="20240605 16:08:18.088"/>
+<msg timestamp="20240625 14:43:44.577" level="INFO">[90m[[0m2024-06-25T12:43:39Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:44.577" level="INFO">[90m[[0m2024-06-25T12:43:39Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:44.577" level="INFO">[90m[[0m2024-06-25T12:43:41Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:44.577" level="INFO">[90m[[0m2024-06-25T12:43:41Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:44.579" level="INFO">[90m[[0m2024-06-25T12:43:43Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
+<msg timestamp="20240625 14:43:44.579" level="INFO">[90m[[0m2024-06-25T12:43:43Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:44.579" level="INFO">[90m[[0m2024-06-25T12:43:43Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:44.579" level="INFO">[90m[[0m2024-06-25T12:43:44Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:44.579" level="INFO">[90m[[0m2024-06-25T12:43:44Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:44.580" level="INFO">[90m[[0m2024-06-25T12:43:44Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:43:44.580" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:39.601" endtime="20240625 14:43:44.580"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:18.089" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:44.581" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<msg timestamp="20240605 16:08:18.089" level="FAIL">0 == 0</msg>
-<status status="FAIL" starttime="20240605 16:08:18.088" endtime="20240605 16:08:18.089"/>
+<status status="PASS" starttime="20240625 14:43:44.580" endtime="20240625 14:43:44.582"/>
 </kw>
-<status status="FAIL" starttime="20240605 16:08:14.157" endtime="20240605 16:08:18.090">0 == 0</status>
+<status status="PASS" starttime="20240625 14:43:39.600" endtime="20240625 14:43:44.582"/>
 </test>
 <test id="s1-t19" name="Test for examples_and_benchmarks/novel/programmable_logic_area/tc2" line="182">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/novel/programmable_logic_area/tc2.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl</arg>
-<msg timestamp="20240605 16:08:22.328" level="INFO">[90m[[0m2024-06-05T14:08:18Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:22.328" level="INFO">[90m[[0m2024-06-05T14:08:18Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:22.328" level="INFO">[90m[[0m2024-06-05T14:08:19Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:22.329" level="INFO">[90m[[0m2024-06-05T14:08:19Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:21Z [32mINFO [0m[90m][0m Identified 18 decision model(s)</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:21Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 2 bidding(s)</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:21Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:22Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:22Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:08:22.330" level="INFO">[90m[[0m2024-06-05T14:08:22Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
-<msg timestamp="20240605 16:08:22.331" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:08:18.091" endtime="20240605 16:08:22.331"/>
+<msg timestamp="20240625 14:43:49.439" level="INFO">[90m[[0m2024-06-25T12:43:44Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:49.439" level="INFO">[90m[[0m2024-06-25T12:43:44Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:49.440" level="INFO">[90m[[0m2024-06-25T12:43:46Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:49.440" level="INFO">[90m[[0m2024-06-25T12:43:46Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:48Z [32mINFO [0m[90m][0m Identified 18 decision model(s)</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:48Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 2 bidding(s)</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:48Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:49Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:49Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">[90m[[0m2024-06-25T12:43:49Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:43:49.442" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:44.585" endtime="20240625 14:43:49.443"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:22.332" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:49.444" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:22.331" endtime="20240605 16:08:22.332"/>
+<status status="PASS" starttime="20240625 14:43:49.443" endtime="20240625 14:43:49.444"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:18.091" endtime="20240605 16:08:22.332"/>
+<status status="PASS" starttime="20240625 14:43:44.583" endtime="20240625 14:43:49.444"/>
 </test>
 <test id="s1-t20" name="Test for examples_and_benchmarks/novel/programmable_logic_area/tc3" line="186">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/novel/programmable_logic_area/tc3.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl</arg>
-<msg timestamp="20240605 16:08:26.124" level="INFO">[90m[[0m2024-06-05T14:08:22Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:26.125" level="INFO">[90m[[0m2024-06-05T14:08:22Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:26.125" level="INFO">[90m[[0m2024-06-05T14:08:23Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:26.125" level="INFO">[90m[[0m2024-06-05T14:08:23Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:26.126" level="INFO">[90m[[0m2024-06-05T14:08:25Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
-<msg timestamp="20240605 16:08:26.127" level="INFO">[90m[[0m2024-06-05T14:08:25Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:08:26.127" level="INFO">[90m[[0m2024-06-05T14:08:25Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:26.127" level="INFO">[90m[[0m2024-06-05T14:08:26Z [32mINFO [0m[90m][0m Finished exploration with 0 total and 0 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:26.127" level="INFO">[90m[[0m2024-06-05T14:08:26Z [32mINFO [0m[90m][0m No solution to reverse identify</msg>
-<msg timestamp="20240605 16:08:26.127" level="INFO">${NumFound} = 0</msg>
-<status status="PASS" starttime="20240605 16:08:22.334" endtime="20240605 16:08:26.127"/>
+<msg timestamp="20240625 14:43:54.166" level="INFO">[90m[[0m2024-06-25T12:43:49Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:54.166" level="INFO">[90m[[0m2024-06-25T12:43:49Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:54.166" level="INFO">[90m[[0m2024-06-25T12:43:50Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:54.167" level="INFO">[90m[[0m2024-06-25T12:43:50Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:54.168" level="INFO">[90m[[0m2024-06-25T12:43:53Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
+<msg timestamp="20240625 14:43:54.168" level="INFO">[90m[[0m2024-06-25T12:43:53Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:54.168" level="INFO">[90m[[0m2024-06-25T12:43:53Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:54.169" level="INFO">[90m[[0m2024-06-25T12:43:54Z [32mINFO [0m[90m][0m Finished exploration with 0 total and 0 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:54.169" level="INFO">[90m[[0m2024-06-25T12:43:54Z [32mINFO [0m[90m][0m No solution to reverse identify</msg>
+<msg timestamp="20240625 14:43:54.169" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:49.445" endtime="20240625 14:43:54.169"/>
 </kw>
 <kw name="Should Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are unequal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:26.128" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:54.170" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:26.128" endtime="20240605 16:08:26.128"/>
+<status status="PASS" starttime="20240625 14:43:54.169" endtime="20240625 14:43:54.170"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:22.333" endtime="20240605 16:08:26.129"/>
+<status status="PASS" starttime="20240625 14:43:49.445" endtime="20240625 14:43:54.170"/>
 </test>
 <test id="s1-t21" name="Test for examples_and_benchmarks/novel/programmable_logic_area/tc3_feasible" line="190">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/novel/programmable_logic_area/tc3_feasible.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl</arg>
-<msg timestamp="20240605 16:08:30.091" level="INFO">[90m[[0m2024-06-05T14:08:26Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:30.091" level="INFO">[90m[[0m2024-06-05T14:08:26Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:30.091" level="INFO">[90m[[0m2024-06-05T14:08:27Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:30.091" level="INFO">[90m[[0m2024-06-05T14:08:27Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:30.092" level="INFO">[90m[[0m2024-06-05T14:08:29Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
-<msg timestamp="20240605 16:08:30.092" level="INFO">[90m[[0m2024-06-05T14:08:29Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
-<msg timestamp="20240605 16:08:30.092" level="INFO">[90m[[0m2024-06-05T14:08:29Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:30.092" level="INFO">[90m[[0m2024-06-05T14:08:29Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:30.093" level="INFO">[90m[[0m2024-06-05T14:08:29Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:08:30.093" level="INFO">[90m[[0m2024-06-05T14:08:30Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
-<msg timestamp="20240605 16:08:30.093" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:08:26.130" endtime="20240605 16:08:30.093"/>
+<msg timestamp="20240625 14:43:58.752" level="INFO">[90m[[0m2024-06-25T12:43:54Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:43:58.753" level="INFO">[90m[[0m2024-06-25T12:43:54Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:43:58.753" level="INFO">[90m[[0m2024-06-25T12:43:55Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:43:58.753" level="INFO">[90m[[0m2024-06-25T12:43:55Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:43:58.754" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Identified 17 decision model(s)</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 1 bidding(s)</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
+<msg timestamp="20240625 14:43:58.755" level="INFO">${NumFound} = 1</msg>
+<status status="PASS" starttime="20240625 14:43:54.172" endtime="20240625 14:43:58.755"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:30.093" level="INFO">Argument types are:
+<msg timestamp="20240625 14:43:58.756" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:30.093" endtime="20240605 16:08:30.093"/>
+<status status="PASS" starttime="20240625 14:43:58.756" endtime="20240625 14:43:58.757"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:26.129" endtime="20240605 16:08:30.094"/>
+<status status="PASS" starttime="20240625 14:43:54.171" endtime="20240625 14:43:58.757"/>
 </test>
 <test id="s1-t22" name="Test for examples_and_benchmarks/novel/programmable_logic_area/tc45" line="194">
 <kw name="Try Explore" library="IDeSyDeLibrary">
 <var>${NumFound}</var>
 <arg>examples_and_benchmarks/novel/programmable_logic_area/tc45.fiodl,examples_and_benchmarks/novel/programmable_logic_area/MPSoC.fiodl</arg>
-<msg timestamp="20240605 16:08:34.424" level="INFO">[90m[[0m2024-06-05T14:08:30Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
-<msg timestamp="20240605 16:08:34.425" level="INFO">[90m[[0m2024-06-05T14:08:30Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
-<msg timestamp="20240605 16:08:34.425" level="INFO">[90m[[0m2024-06-05T14:08:31Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
-<msg timestamp="20240605 16:08:34.425" level="INFO">[90m[[0m2024-06-05T14:08:31Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:33Z [32mINFO [0m[90m][0m Identified 18 decision model(s)</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:33Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 2 bidding(s)</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:33Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:34Z [32mINFO [0m[90m][0m Finished exploration with 1 total and 1 dominant solution(s)</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:34Z [32mINFO [0m[90m][0m Starting reverse identification</msg>
-<msg timestamp="20240605 16:08:34.427" level="INFO">[90m[[0m2024-06-05T14:08:34Z [32mINFO [0m[90m][0m Finished reverse identification of 0 design model(s)</msg>
-<msg timestamp="20240605 16:08:34.428" level="INFO">${NumFound} = 1</msg>
-<status status="PASS" starttime="20240605 16:08:30.094" endtime="20240605 16:08:34.428"/>
+<msg timestamp="20240625 14:44:03.743" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Run directory is test_runs</msg>
+<msg timestamp="20240625 14:44:03.743" level="INFO">[90m[[0m2024-06-25T12:43:58Z [32mINFO [0m[90m][0m Final output set to explored_and_integrated.fiodl</msg>
+<msg timestamp="20240625 14:44:03.744" level="INFO">[90m[[0m2024-06-25T12:44:00Z [32mINFO [0m[90m][0m A total of 5 modules and 3 explorers were detected.</msg>
+<msg timestamp="20240625 14:44:03.744" level="INFO">[90m[[0m2024-06-25T12:44:00Z [32mINFO [0m[90m][0m Starting identification with 0 pre-identified decision models</msg>
+<msg timestamp="20240625 14:44:03.748" level="INFO">[90m[[0m2024-06-25T12:44:03Z [32mINFO [0m[90m][0m Identified 18 decision model(s)</msg>
+<msg timestamp="20240625 14:44:03.748" level="INFO">[90m[[0m2024-06-25T12:44:03Z [32mINFO [0m[90m][0m Acquired 1 dominant bidding(s) out of 2 bidding(s)</msg>
+<msg timestamp="20240625 14:44:03.748" level="INFO">[90m[[0m2024-06-25T12:44:03Z [32mINFO [0m[90m][0m Starting exploration up to 1 solution(s)</msg>
+<msg timestamp="20240625 14:44:03.748" level="INFO">[90m[[0m2024-06-25T12:44:03Z [32mINFO [0m[90m][0m Finished exploration with 0 total and 0 dominant solution(s)</msg>
+<msg timestamp="20240625 14:44:03.749" level="INFO">[90m[[0m2024-06-25T12:44:03Z [32mINFO [0m[90m][0m No solution to reverse identify</msg>
+<msg timestamp="20240625 14:44:03.749" level="INFO">${NumFound} = 0</msg>
+<status status="PASS" starttime="20240625 14:43:58.758" endtime="20240625 14:44:03.749"/>
 </kw>
 <kw name="Should Not Be Equal As Integers" library="BuiltIn">
 <arg>${NumFound}</arg>
 <arg>0</arg>
 <doc>Fails if objects are equal after converting them to integers.</doc>
-<msg timestamp="20240605 16:08:34.429" level="INFO">Argument types are:
+<msg timestamp="20240625 14:44:03.751" level="INFO">Argument types are:
 &lt;class 'int'&gt;
 &lt;class 'str'&gt;</msg>
-<status status="PASS" starttime="20240605 16:08:34.428" endtime="20240605 16:08:34.429"/>
+<msg timestamp="20240625 14:44:03.751" level="FAIL">0 == 0</msg>
+<status status="FAIL" starttime="20240625 14:44:03.750" endtime="20240625 14:44:03.751"/>
 </kw>
-<status status="PASS" starttime="20240605 16:08:30.094" endtime="20240605 16:08:34.429"/>
+<status status="FAIL" starttime="20240625 14:43:58.757" endtime="20240625 14:44:03.752">0 == 0</status>
 </test>
-<status status="FAIL" starttime="20240605 16:07:03.246" endtime="20240605 16:08:34.432"/>
+<status status="FAIL" starttime="20240625 14:42:00.888" endtime="20240625 14:44:03.757"/>
 </suite>
 <statistics>
 <total>
-<stat pass="21" fail="1" skip="0">All Tests</stat>
+<stat pass="20" fail="2" skip="0">All Tests</stat>
 </total>
 <tag>
 </tag>
 <suite>
-<stat pass="21" fail="1" skip="0" id="s1" name="TestsBenchmark">TestsBenchmark</stat>
+<stat pass="20" fail="2" skip="0" id="s1" name="TestsBenchmark">TestsBenchmark</stat>
 </suite>
 </statistics>
 <errors>

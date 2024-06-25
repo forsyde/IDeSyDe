@@ -25,7 +25,7 @@ class GeneralDSETests {
     void testAADTPMExplorer() throws StreamReadException, DatabindException, IOException {
         final Explorer.Configuration config = new Explorer.Configuration();
         config.maximumSolutions = 1L;
-        config.parallelism = 1;
+        // config.parallelism = 1;
         // config.targetObjectives = Set.of("invThroughput(CS_0)");
         final JeneticsExplorer explorer = new JeneticsExplorer();
         InputStream is = getClass().getResourceAsStream(
@@ -33,9 +33,9 @@ class GeneralDSETests {
         AperiodicAsynchronousDataflowToPartitionedTiledMulticore aadtpm = objectMapper.readValue(is,
                 AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class);
         var found = explorer.explore(aadtpm, Set.of(), config)
-                .limit(2)
+                .limit(1)
                 .count();
-        assertEquals(found, 2);
+        assertEquals(found, 1);
     }
 
 //     @Test

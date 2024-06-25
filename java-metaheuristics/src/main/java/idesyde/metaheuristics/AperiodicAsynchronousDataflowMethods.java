@@ -3,15 +3,14 @@ package idesyde.metaheuristics;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.stream.IntStream;
 
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.alg.connectivity.KosarajuStrongConnectivityInspector;
 import org.jgrapht.alg.cycle.JohnsonSimpleCycles;
-import org.jgrapht.alg.cycle.TarjanSimpleCycles;
 import org.jgrapht.graph.*;
-import org.jgrapht.traverse.BreadthFirstIterator;
 
 interface AperiodicAsynchronousDataflowMethods {
 
@@ -28,71 +27,105 @@ interface AperiodicAsynchronousDataflowMethods {
             for (var e : follows.outgoingEdgesOf(i)) {
                 var j = follows.getEdgeTarget(e);
                 mappingGraph.addVertex(j);
-                mappingGraph.addVertex(numJobs*(i + 1) + j);
-                mappingGraph.addEdge(i, numJobs*(i + 1) + j);
-                mappingGraph.setEdgeWeight(i, numJobs*(i + 1) + j, jobWeights[i]);
-                mappingGraph.addEdge(numJobs*(i + 1) + j, j);
-                mappingGraph.setEdgeWeight(numJobs*(i + 1) + j, j, edgeWeigths[i][j]);
+                if (mapping[i] != mapping[j]) {
+                    mappingGraph.addVertex(numJobs*(i + 1) + j);
+                    mappingGraph.addEdge(i, numJobs*(i + 1) + j);
+                    mappingGraph.setEdgeWeight(i, numJobs*(i + 1) + j, jobWeights[i]);
+                    mappingGraph.addEdge(numJobs*(i + 1) + j, j);
+                    mappingGraph.setEdgeWeight(numJobs*(i + 1) + j, j, edgeWeigths[i][j]);
+                } else {
+                    mappingGraph.addEdge(i, j);
+                    mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
+                }
             }
         }
         // now overlay the ordering parts
         for (int i = 0; i < numJobs; i++) {
-            for (int j = 0; j < numJobs; j++) {
-                if (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]) {
-                    mappingGraph.addVertex(i);
-                    mappingGraph.addVertex(j);
-                    mappingGraph.addEdge(i, j);
-                    mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
-                    // including the ordering of messages
-                    for (var e : follows.outgoingEdgesOf(i)) {
-                        var k = follows.getEdgeTarget(e);
-                        for (var ee : follows.outgoingEdgesOf(j)) {
-                            var l = follows.getEdgeTarget(ee);
-                            mappingGraph.addEdge(numJobs*(i + 1) + k, numJobs*(j + 1) + l);
-                            mappingGraph.setEdgeWeight(numJobs*(i + 1) + k, numJobs*(j + 1) + l, edgeWeigths[i][k]);
-                        }
-                    }
-                } else if (mapping[i] == mapping[j] && ordering[j] == 0 && ordering[i] > 0) {
-                    mappingGraph.addVertex(i);
-                    mappingGraph.addVertex(j);
-                    mappingGraph.addEdge(i, j);
-                    mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
-                    // including the ordering of messages
-                    for (var e : follows.outgoingEdgesOf(i)) {
-                        var k = follows.getEdgeTarget(e);
-                        for (var ee : follows.outgoingEdgesOf(j)) {
-                            var l = follows.getEdgeTarget(ee);
-                            mappingGraph.addEdge(numJobs*(i + 1) + k, numJobs*(j + 1) + l);
-                            mappingGraph.setEdgeWeight(numJobs*(i + 1) + k, numJobs*(j + 1) + l, edgeWeigths[i][k]);
-                        }
-                    }
-                }
-            }
+            var finalI = i;
+            var j = IntStream.range(0, numJobs).filter(k -> mapping[k] == mapping[finalI] && ordering[k] == ordering[finalI] + 1).findFirst().orElseGet(() -> IntStream.range(0, numJobs).filter(k -> mapping[k] == mapping[finalI] && ordering[k] == 0).findFirst().orElse(finalI));
+            mappingGraph.addVertex(i);
+            mappingGraph.addVertex(j);
+            mappingGraph.addEdge(i, j);
+            mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
+            // for (var e : follows.outgoingEdgesOf(i)) {
+            //     var k = follows.getEdgeTarget(e);
+            //     for (var ee : follows.outgoingEdgesOf(j)) {
+            //         var l = follows.getEdgeTarget(ee);
+            //         mappingGraph.addEdge(numJobs*(i + 1) + k, numJobs*(j + 1) + l);
+            //         mappingGraph.setEdgeWeight(numJobs*(i + 1) + k, numJobs*(j + 1) + l, edgeWeigths[i][k]);
+            //     }
+            // }
+                
+            // ifPresentOrElse(j -> {
+            // }, () -> {
+            //     var cycleClosure = IntStream.range(0, numJobs).filter(j -> mapping[j] == mapping[i] && ordering[j] == 0).findFirst().ifPresent(j -> {
+
+            //     });
+            // });
+            // if (next.isPresent()) {
+            //     var j = next.getAsInt();
+            // } else {
+            //     ;
+
+            // }
+            // for (int j = 0; j < numJobs; j++) {
+            //     if (mapping[i] == mapping[j] && ordering[i] + 1 == ordering[j]) {
+            //         mappingGraph.addVertex(i);
+            //         mappingGraph.addVertex(j);
+            //         mappingGraph.addEdge(i, j);
+            //         mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
+            //         // including the ordering of messages
+            //         for (var e : follows.outgoingEdgesOf(i)) {
+            //             var k = follows.getEdgeTarget(e);
+            //             for (var ee : follows.outgoingEdgesOf(j)) {
+            //                 var l = follows.getEdgeTarget(ee);
+            //                 mappingGraph.addEdge(numJobs*(i + 1) + k, numJobs*(j + 1) + l);
+            //                 mappingGraph.setEdgeWeight(numJobs*(i + 1) + k, numJobs*(j + 1) + l, edgeWeigths[i][k]);
+            //             }
+            //         }
+            //     } else if (mapping[i] == mapping[j] && ordering[j] == 0 && ordering[i] > 0) {
+            //         mappingGraph.addVertex(i);
+            //         mappingGraph.addVertex(j);
+            //         mappingGraph.addEdge(i, j);
+            //         mappingGraph.setEdgeWeight(i, j, jobWeights[i]);
+            //         // including the ordering of messages
+            //         for (var e : follows.outgoingEdgesOf(i)) {
+            //             var k = follows.getEdgeTarget(e);
+            //             for (var ee : follows.outgoingEdgesOf(j)) {
+            //                 var l = follows.getEdgeTarget(ee);
+            //                 mappingGraph.addEdge(numJobs*(i + 1) + k, numJobs*(j + 1) + l);
+            //                 mappingGraph.setEdgeWeight(numJobs*(i + 1) + k, numJobs*(j + 1) + l, edgeWeigths[i][k]);
+            //             }
+            //         }
+            //     }
+            // }
         }
         // System.out.println(
         // "mappings is %s and weights is %s".formatted(Arrays.toString(mapping), Arrays.toString(jobWeights)));
         // System.out.println("edge weights are %s".formatted(Arrays.stream(edgeWeigths).map(Arrays::toString).reduce("", (a, b) -> a + "," + b)));
         // var mergedGraph = new AsGraphUnion<>(follows, mappingGraph);
-        var maxCycles = new double[numJobs * (numJobs + 1)];
+        var maxCycles = new HashMap<Integer, Double>();
         // var invThroughputs = new double[numJobs * (numJobs + 1)];
-        for (int i = 0; i < numJobs; i++) {
-            maxCycles[i] = 0.0;
+        for (int v : mappingGraph.vertexSet()) {
+            maxCycles.put(v, 0.0);
+        }
+        // for (int i = 0; i < numJobs; i++) {
+        //     maxCycles.put(i, 0.0);
             // invThroughputs[i] = jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum();
-        }
-        for (int i = numJobs; i < numJobs; i++) {
-            for (int j = 0; j < numJobs; j++) {
-                maxCycles[numJobs* (i + 1) + j] = 0.0;
-                // invThroughputs[numJobs* (i + 1) + j] = edgeWeigths[i][j];
-            }
-        }
+        // }
+        // for (int i = numJobs; i < numJobs; i++) {
+        //     for (int j = 0; j < numJobs; j++) {
+        //         maxCycles[numJobs* (i + 1) + j] = 0.0;
+        //         // invThroughputs[numJobs* (i + 1) + j] = edgeWeigths[i][j];
+        //     }
+        // }
+        // System.out.println("Starting");
         var sccAlgorithm = new KosarajuStrongConnectivityInspector<>(mappingGraph);
         sccAlgorithm.stronglyConnectedSets().forEach(scc -> {
-            // System.out.println("scc: " + scc);
             if (scc.size() > 1) {
                 var sccGraph = new AsSubgraph<>(mappingGraph, scc);
                 var simpleCycles = new JohnsonSimpleCycles<>(sccGraph);
-                var cycles = simpleCycles.findSimpleCycles();
-                cycles.forEach(cycle -> {
+                simpleCycles.findSimpleCycles().forEach(cycle -> {
                     // System.out.println("Cycle is %s".formatted(cycle));
                     var cycleVal = sccGraph.getEdgeWeight(sccGraph.getEdge(cycle.get(cycle.size() - 1), cycle.get(0)));
                     for (int i = 0; i < cycle.size() - 1; i++) {
@@ -101,64 +134,27 @@ interface AperiodicAsynchronousDataflowMethods {
                     }
                     // System.out.println("Cycle is %s with value %f".formatted(cycle, cycleVal));
                     for (int v : cycle) {
-                        maxCycles[v] = Math.max(maxCycles[v], cycleVal);
+                        maxCycles.put(v, Math.max(maxCycles.getOrDefault(v, 0.0), cycleVal));
                     }
                 });
-        //         // var pivotOpt = scc.stream().filter(x -> x < numJobs).findFirst(); // there should be at least one
-        //         // pivotOpt.ifPresent(pivot -> {
-                
-        //         //     var bfs = new BreadthFirstIterator<>(sccGraph, pivot);
-        //         //     // bfs.next(); // skip the first one
-        //         //     // System.out.println("Pivot is %d".formatted(pivot));
-        //         //     while (bfs.hasNext()) {
-        //         //         var next = bfs.next();
-        //         //         // try to find the maximum cycle
-        //         //         if (sccGraph.containsEdge(next, pivot)) {
-        //         //             var cur = next;
-        //         //             var prev = bfs.getParent(next);
-        //         //             var cycleVal = sccGraph.getEdgeWeight(sccGraph.getEdge(cur, pivot));
-        //         //             // System.out.println("Itearting closed cycle in %s".formatted(cur));
-        //         //             // System.out.println("Cur is %d, Prev is %s".formatted(cur, prev));
-        //         //             while (cur != pivot) {
-        //         //                 // System.out.println("Cur is %d, Prev is %s".formatted(cur, prev));
-        //         //                 cycleVal += sccGraph.getEdgeWeight(sccGraph.getEdge(prev, cur));
-        //         //                 cur = prev;
-        //         //                 prev = bfs.getParent(cur);
-        //         //             }
-        //         //             maxCycles[pivot] = Math.max(maxCycles[pivot], cycleVal);
-        //         //         }
-        //         //         // System.out.println("Next is %d".formatted(next));
-        //         //         // for (var e : sccGraph.incomingEdgesOf(next)) {
-        //         //         //     var prev = sccGraph.getEdgeSource(e);
-        //         //         //     System.out.println("Prev is %d with edge %f, cur is %f".formatted(prev, sccGraph.getEdgeWeight(e), maxCycles[prev]));
-        //         //         //     maxCycles[next] = Math.max(maxCycles[next], maxCycles[prev] + sccGraph.getEdgeWeight(e));
-        //         //         // }
-        //         //     }
-        //         //     // add the value in the cycle
-        //         //     // for (var e : sccGraph.incomingEdgesOf(pivot)) {
-        //         //     //     var prev = sccGraph.getEdgeSource(e);
-        //         //     //     System.out.println("Closing cycle with %d and edge %f".formatted(prev, sccGraph.getEdgeWeight(e)));
-        //         //     //     maxCycles[pivot] = Math.max(maxCycles[pivot], maxCycles[prev] + sccGraph.getEdgeWeight(e));
-        //         //     // }
-        //         // });
             }
         });
         // now add cycles created by the transmission of messages
         for (int i = 0; i < numJobs; i++) {
             var finalI = i;
-            maxCycles[i] = Math.max(maxCycles[i], jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum());
+            maxCycles.put(i, Math.max(maxCycles.getOrDefault(i, 0.0), jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum()));
         }
-        // System.out.println("A maxCycles: " + Arrays.toString(maxCycles));
+        // System.out.println("A maxCycles: " + maxCycles);
         var mappedInspector = new ConnectivityInspector<>(mappingGraph);
         mappedInspector.connectedSets().forEach(wcc -> {
             // System.out.println("wcc: " + wcc);
-            wcc.stream().mapToDouble(jobI -> maxCycles[jobI]).max().ifPresent(maxValue -> {
+            wcc.stream().mapToDouble(jobI -> maxCycles.get(jobI)).max().ifPresent(maxValue -> {
                 for (var jobI : wcc) {
-                    maxCycles[jobI] = maxValue;
+                    maxCycles.put(jobI, maxValue);
                 }
             });
         });
-        return maxCycles;
+        return IntStream.range(0, numJobs).mapToDouble(i -> maxCycles.get(i)).toArray();
     }
 
     default boolean mappingIsFeasible(

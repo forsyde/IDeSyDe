@@ -220,8 +220,8 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
         var engine = Engine
                 .builder(g -> evaluateAADPTM(g, jobs, jobIdxGraph, configuration),
                         allConstraints.constrain(codec))
-                // .executor(Executors.newSingleThreadExecutor())
                 .offspringSelector(new TournamentSelector<>(5))
+                // .executor(Executors.newSingleThreadExecutor())
                 .survivorsSelector(UFTournamentSelector.ofVec())
                 .constraint(allConstraints)
                 .alterers(
@@ -394,7 +394,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 .stream()
                 .mapToDouble(app -> 
                         app.buffers().stream()
-                                .filter(b -> app.processPutInBufferInBits().get(src.process()).containsKey(b) && app.processGetFromBufferInBits().get(dst.process()).containsKey(b))
+                                .filter(b -> app.processPutInBufferInBits().getOrDefault(src.process(), Map.of()).containsKey(b) && app.processGetFromBufferInBits().getOrDefault(dst.process(), Map.of()).containsKey(b))
                                 .mapToDouble(b -> app.processPutInBufferInBits().get(src.process()).get(b))
                                 .sum()
                 )

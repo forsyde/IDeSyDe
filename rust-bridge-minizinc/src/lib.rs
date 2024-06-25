@@ -223,6 +223,86 @@ impl Explorer for MiniZincGecodeExplorer {
     }
 }
 
+struct MiniZincORToolsExplorer;
+
+impl Explorer for MiniZincORToolsExplorer {
+    fn unique_identifier(&self) -> String {
+        "MiniZincORToolsExplorer".to_string()
+    }
+
+    fn bid(
+        &self,
+        m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
+    ) -> idesyde_core::ExplorationBid {
+        if let Ok(_) = Command::new("minizinc").output() {
+            if let Ok(aad2pmmmap) =
+                AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL::try_from(
+                    m.as_ref(),
+                )
+            {
+                let mut objs = HashSet::new();
+                objs.insert("nUsedPEs".to_string());
+                for app in &aad2pmmmap.aperiodic_asynchronous_dataflows {
+                    for p in app.processes.iter() {
+                        objs.insert(format!("invThroughput({})", p));
+                    }
+                }
+                return ExplorationBid {
+                    can_explore: true,
+                    is_exact: true,
+                    competitiveness: 1.0,
+                    target_objectives: objs,
+                    additional_numeric_properties: HashMap::new(),
+                };
+            }
+            if let Ok(aad2ptm) =
+                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
+                    m.as_ref(),
+                )
+            {
+                let mut objs = HashSet::new();
+                objs.insert("nUsedPEs".to_string());
+                for app in &aad2ptm.aperiodic_asynchronous_dataflows {
+                    for p in app.processes.iter() {
+                        objs.insert(format!("invThroughput({})", p));
+                    }
+                }
+                return ExplorationBid {
+                    can_explore: true,
+                    is_exact: true,
+                    competitiveness: 1.0,
+                    target_objectives: objs,
+                    additional_numeric_properties: HashMap::new(),
+                };
+            }
+        }
+        ExplorationBid::impossible()
+    }
+
+    fn explore(
+        &self,
+        m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
+        currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
+        _exploration_configuration: idesyde_core::ExplorationConfiguration,
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+        if let Ok(aad2pmmmap) =
+            AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL::try_from(
+                m.as_ref(),
+            )
+        {
+            return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "gecode");
+        }
+        if let Ok(aad2ptm) =
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
+                m.as_ref(),
+            )
+        {
+            return solve_aad2ptm(&aad2ptm, currrent_solutions, "gecode");
+        }
+        Arc::new(Mutex::new(std::iter::empty()))
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
 struct MiniZincSolutionOutput<T> {
     #[serde(rename = "type")]
@@ -1509,7 +1589,8 @@ pub fn make_module() -> RustEmbeddedModule {
     RustEmbeddedModule::builder()
         .unique_identifier("MiniZincModule".to_string())
         .identification_rules(vec![])
-        .explorers(vec![Arc::new(MiniZincGecodeExplorer)])
+        // .explorers(vec![Arc::new(MiniZincGecodeExplorer)])
+        .explorers(vec![Arc::new(MiniZincORToolsExplorer)])
         .build()
         .expect("Failed to build MiniZincModule. Should never happen.")
 }

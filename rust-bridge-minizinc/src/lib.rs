@@ -9,7 +9,7 @@ use std::{
 };
 
 use idesyde_common::models::{AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL, AperiodicAsynchronousDataflowToPartitionedTiledMulticore};
-use idesyde_core::{ExplorationBid, ExplorationSolution, Explorer, RustEmbeddedModule};
+use idesyde_core::{ExplorationBid, ExplorationConfiguration, ExplorationSolution, Explorer, RustEmbeddedModule};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -203,7 +203,7 @@ impl Explorer for MiniZincGecodeExplorer {
         &self,
         m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
         currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
-        _exploration_configuration: idesyde_core::ExplorationConfiguration,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
     ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         if let Ok(aad2pmmmap) =
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL::try_from(
@@ -217,7 +217,7 @@ impl Explorer for MiniZincGecodeExplorer {
                 m.as_ref(),
             )
         {
-            return solve_aad2ptm(&aad2ptm, currrent_solutions, "gecode");
+            return solve_aad2ptm(&aad2ptm, currrent_solutions, &exploration_configuration, "gecode");
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -283,7 +283,7 @@ impl Explorer for MiniZincORToolsExplorer {
         &self,
         m: std::sync::Arc<dyn idesyde_core::DecisionModel>,
         currrent_solutions: &std::collections::HashSet<idesyde_core::ExplorationSolution>,
-        _exploration_configuration: idesyde_core::ExplorationConfiguration,
+        exploration_configuration: idesyde_core::ExplorationConfiguration,
     ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
         if let Ok(aad2pmmmap) =
             AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL::try_from(
@@ -297,7 +297,7 @@ impl Explorer for MiniZincORToolsExplorer {
                 m.as_ref(),
             )
         {
-            return solve_aad2ptm(&aad2ptm, currrent_solutions, "com.google.ortools.sat");
+            return solve_aad2ptm(&aad2ptm, currrent_solutions, &exploration_configuration, "com.google.ortools.sat");
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -1032,7 +1032,8 @@ struct AADPTMMznOutput {
 fn solve_aad2ptm(
     m: &AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
     current_solutions: &HashSet<ExplorationSolution>,
-    explorer_name: &str,
+    configuration: &ExplorationConfiguration,
+    minizinc_solver_name: &str,
 ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
     let mut input_data = vec![];
     let mut messages: Vec<String> = vec![];
@@ -1428,13 +1429,19 @@ fn solve_aad2ptm(
                 .iter()
                 .map(|s| {
                     let mut objs = vec![];
-                    objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
+                    if configuration.target_objectives.is_empty() && configuration.target_objectives.contains("nUsedPEs") {
+                        objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
+                    }
                     for p in &all_processes {
-                        objs.push(
-                            *s.objectives
-                                .get(&format!("invThroughput({})", p))
-                                .unwrap_or(&0.0) as u64,
-                        );
+                        let obj_name = format!("invThroughput({})", p);
+                        if configuration.target_objectives.is_empty() && configuration.target_objectives.contains(&obj_name) {
+                            objs.push(
+                                s.objectives
+                                    .get(&format!("invThroughput({})", p))
+                                    .map(|x| *x / (average_max as f64) * (discrete_max as f64))
+                                    .unwrap_or(0.0) as u64,
+                            );
+                        }
                     }
                     objs
                 })
@@ -1452,7 +1459,7 @@ fn solve_aad2ptm(
     match std::process::Command::new("minizinc")
     .arg("-f")
     .arg("--solver")
-    .arg(explorer_name)
+    .arg(minizinc_solver_name)
             .arg("--json-stream")
             .arg("--output-mode")
             .arg("json")

@@ -1429,12 +1429,12 @@ fn solve_aad2ptm(
                 .iter()
                 .map(|s| {
                     let mut objs = vec![];
-                    if configuration.target_objectives.is_empty() && configuration.target_objectives.contains("nUsedPEs") {
+                    if configuration.target_objectives.is_empty() || configuration.target_objectives.contains("nUsedPEs") {
                         objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
                     }
                     for p in &all_processes {
                         let obj_name = format!("invThroughput({})", p);
-                        if configuration.target_objectives.is_empty() && configuration.target_objectives.contains(&obj_name) {
+                        if configuration.target_objectives.is_empty() || configuration.target_objectives.contains(&obj_name) {
                             objs.push(
                                 s.objectives
                                     .get(&format!("invThroughput({})", p))
@@ -1458,6 +1458,9 @@ fn solve_aad2ptm(
     std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
     match std::process::Command::new("minizinc")
     .arg("-f")
+    .arg("-a")
+    .arg("-p")
+    .arg(configuration.parallelism.to_string())
     .arg("--solver")
     .arg(minizinc_solver_name)
             .arg("--json-stream")

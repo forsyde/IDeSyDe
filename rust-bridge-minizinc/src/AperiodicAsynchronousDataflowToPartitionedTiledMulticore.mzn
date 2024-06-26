@@ -61,6 +61,9 @@ constraint forall(b in Buffers) (durationBufferMessage[b] <= max(src in Processe
   let { set of int: path = interconnectTo[mSrc, mDst]; } in
   sum(ce in path) (frameSize[ce]) + processesWriteBuffer[src, b] * min(ce in path) (invBandwidthPerChannel[ce])
 ));
+int: maxTh = sum(p in Processes) (max([e | e in executionTime[p, ..] where e >= 0]));
+constraint forall(p in Processes) (invThroughput[p] <= maxTh);
+constraint forall(p in Processes) (invThroughput[p] >= lb(duration[p]));
 
 constraint forall(p in Processes, l in AllCycles) (maxPath[p, l] >= 0);
 constraint forall(m in Messages, l in AllCycles) (maxPathMessages[m, l] >= 0);
@@ -162,6 +165,12 @@ constraint forall(solNum in 1..nPareto) (
 );
 
 
-solve 
+solve
+  :: int_search(
+    invThroughput, input_order, indomain_min
+  )
+  :: int_search(
+    processMapping, impact, indomain_random
+  )
   :: warm_start(processMapping, [arg_min([executionTime[p, pe] | pe in Tiles where executionTime[p, pe] > 0]) | p in Processes]) 
   satisfy;

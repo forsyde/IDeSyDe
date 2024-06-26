@@ -1457,8 +1457,8 @@ fn solve_aad2ptm(
     std::fs::write(&model_file, AADPTM_MZN).expect("Could not write the model file");
     std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
     match std::process::Command::new("minizinc")
-    .arg("-f")
-    .arg("-a")
+    // .arg("-f")
+    // .arg("-a")
     .arg("-p")
     .arg(configuration.parallelism.to_string())
     .arg("--solver")
@@ -1486,7 +1486,7 @@ fn solve_aad2ptm(
                         // })
                         .flat_map(move |line_r| {
                             if let Ok(line) = line_r {
-                                if line.contains("UNSATISFIABLE") {
+                                if line.contains("UNSATISFIABLE") || line.contains("ALL SOLUTIONS") {
                                     return None;
                                 } else if line.contains("output") {
                                     let mzn_out: MiniZincSolutionOutput<AADPTMMznOutput> =

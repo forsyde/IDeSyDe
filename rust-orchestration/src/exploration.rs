@@ -403,8 +403,9 @@ pub struct MultiLevelCombinedExplorerIterator3 {
     // levels: Vec<CombinedExplorerIterator>,
     // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
     current_solutions: HashSet<ExplorationSolution>,
-    level_streams: Vec<Receiver<ExplorationSolution>>,
+    levels_streams: Vec<Receiver<ExplorationSolution>>,
     levels_status: Vec<Arc<Mutex<ExplorationStatus>>>,
+    levels_is_exact: Vec<bool>,
     levels_start: Vec<Instant>,
     num_found: u64,
     // converged_to_last_level: bool,
@@ -422,19 +423,20 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
             {
                 return None;
             }
-            if self.level_streams.len() == 0 {
+            if self.levels_streams.len() == 0 {
                 return None;
             }
-            while self.level_streams.len() > 2 {
+            while self.levels_streams.len() > 2 {
                 let _ = self.levels_status[0]
                     .lock()
                     .map(|mut x| *x = ExplorationStatus::Dominated);
                 self.levels_status.remove(0);
-                self.level_streams.remove(0);
+                self.levels_streams.remove(0);
                 self.levels_start.remove(0);
+                self.levels_is_exact.remove(0);
             }
-            for i in (0..self.level_streams.len()).rev() {
-                if let Some(level) = self.level_streams.get(i) {
+            for i in (0..self.levels_streams.len()).rev() {
+                if let Some(level) = self.levels_streams.get(i) {
                     match level.recv_timeout(Duration::from_millis(500)) {
                         Ok(solution) => {
                             if !self.current_solutions.iter().any(|s| {
@@ -456,9 +458,10 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                     &self.exploration_configuration,
                                     &self.current_solutions,
                                 );
-                                self.level_streams.push(new_level);
+                                self.levels_streams.push(new_level);
                                 self.levels_status.push(is_dominated);
                                 self.levels_start.push(Instant::now());
+                                self.levels_is_exact.push(self.biddings.iter().any(|x| x.is_exact));
                                 // if sol_dominates {
                                 // }
                                 return Some(solution);
@@ -473,9 +476,10 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                     false
                                 };
                             if improv_timed_out {
-                                self.level_streams.remove(i);
+                                self.levels_streams.remove(i);
                                 self.levels_status.remove(i);
                                 self.levels_start.remove(i);
+                                self.levels_is_exact.remove(i);
                                 break;
                             }
                         }
@@ -484,12 +488,13 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                 .lock()
                                 .map(|x| *x == ExplorationStatus::Optimal)
                                 .unwrap_or(false);
-                            if optimal {
+                            if optimal && self.levels_is_exact.iter().all(|x| !*x) {
                                 return None;
                             } else {
-                                self.level_streams.remove(i);
+                                self.levels_streams.remove(i);
                                 self.levels_status.remove(i);
                                 self.levels_start.remove(i);
+                                self.levels_is_exact.remove(i);
                             }
                             break;
                         }
@@ -715,8 +720,9 @@ pub fn explore_cooperatively(
         exploration_configuration: exploration_configuration.to_owned(),
         start: Instant::now(),
         num_found: 0,
-        level_streams: vec![new_level],
+        levels_streams: vec![new_level],
         levels_status: vec![is_dominated],
         levels_start: vec![Instant::now()],
+        levels_is_exact: vec![biddings.iter().any(|x| x.is_exact)],
     }
 }

@@ -1,4 +1,3 @@
-
 use std::io::BufRead;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
@@ -8,8 +7,13 @@ use std::{
     io::BufReader,
 };
 
-use idesyde_common::models::{AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL, AperiodicAsynchronousDataflowToPartitionedTiledMulticore};
-use idesyde_core::{ExplorationBid, ExplorationConfiguration, ExplorationSolution, Explorer, RustEmbeddedModule};
+use idesyde_common::models::{
+    AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
+    AperiodicAsynchronousDataflowToPartitionedTiledMulticore,
+};
+use idesyde_core::{
+    ExplorationBid, ExplorationConfiguration, ExplorationSolution, Explorer, RustEmbeddedModule,
+};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -176,9 +180,7 @@ impl Explorer for MiniZincGecodeExplorer {
                 };
             }
             if let Ok(aad2ptm) =
-                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
-                    m.as_ref(),
-                )
+                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(m.as_ref())
             {
                 let mut objs = HashSet::new();
                 objs.insert("nUsedPEs".to_string());
@@ -213,11 +215,14 @@ impl Explorer for MiniZincGecodeExplorer {
             return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "gecode");
         }
         if let Ok(aad2ptm) =
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
-                m.as_ref(),
-            )
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(m.as_ref())
         {
-            return solve_aad2ptm(&aad2ptm, currrent_solutions, &exploration_configuration, "gecode");
+            return solve_aad2ptm(
+                &aad2ptm,
+                currrent_solutions,
+                &exploration_configuration,
+                "gecode",
+            );
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -256,9 +261,7 @@ impl Explorer for MiniZincORToolsExplorer {
                 };
             }
             if let Ok(aad2ptm) =
-                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
-                    m.as_ref(),
-                )
+                AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(m.as_ref())
             {
                 let mut objs = HashSet::new();
                 objs.insert("nUsedPEs".to_string());
@@ -293,11 +296,14 @@ impl Explorer for MiniZincORToolsExplorer {
             return solve_aad2pmmmap(&aad2pmmmap, currrent_solutions, "com.google.ortools.sat");
         }
         if let Ok(aad2ptm) =
-            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(
-                m.as_ref(),
-            )
+            AperiodicAsynchronousDataflowToPartitionedTiledMulticore::try_from(m.as_ref())
         {
-            return solve_aad2ptm(&aad2ptm, currrent_solutions, &exploration_configuration, "com.google.ortools.sat");
+            return solve_aad2ptm(
+                &aad2ptm,
+                currrent_solutions,
+                &exploration_configuration,
+                "com.google.ortools.sat",
+            );
         }
         Arc::new(Mutex::new(std::iter::empty()))
     }
@@ -1057,12 +1063,34 @@ fn solve_aad2ptm(
         .zip(all_firings_instances.iter().map(|i| i.to_owned()))
         .collect();
     for app in &m.aperiodic_asynchronous_dataflows {
-        for (((srca, srcq), dsta), dstq) in app.job_graph_src_name.iter().zip(app.job_graph_src_instance.iter()).zip(app.job_graph_dst_name.iter()).zip(app.job_graph_dst_instance.iter()) {
-            let firing_src_idx = all_firings.iter().position(|(f, i)| f == srca && i == srcq).unwrap();
-            let firings_dst_idx = all_firings.iter().position(|(f, i)| f == dsta && i == dstq).unwrap();
+        for (((srca, srcq), dsta), dstq) in app
+            .job_graph_src_name
+            .iter()
+            .zip(app.job_graph_src_instance.iter())
+            .zip(app.job_graph_dst_name.iter())
+            .zip(app.job_graph_dst_instance.iter())
+        {
+            let firing_src_idx = all_firings
+                .iter()
+                .position(|(f, i)| f == srca && i == srcq)
+                .unwrap();
+            let firings_dst_idx = all_firings
+                .iter()
+                .position(|(f, i)| f == dsta && i == dstq)
+                .unwrap();
             for c in &app.buffers {
-                if app.process_put_in_buffer_in_bits.get(srca).and_then(|x| x.get(c)).unwrap_or(&0) > &0
-                    && app.process_get_from_buffer_in_bits.get(dsta).and_then(|x| x.get(c)).unwrap_or(&0) > &0
+                if app
+                    .process_put_in_buffer_in_bits
+                    .get(srca)
+                    .and_then(|x| x.get(c))
+                    .unwrap_or(&0)
+                    > &0
+                    && app
+                        .process_get_from_buffer_in_bits
+                        .get(dsta)
+                        .and_then(|x| x.get(c))
+                        .unwrap_or(&0)
+                        > &0
                 {
                     messages.push(c.clone());
                     messages_sender.push(firing_src_idx);
@@ -1094,10 +1122,12 @@ fn solve_aad2ptm(
         .hardware
         .routers
         .iter()
-        .chain(m
-            .partitioned_tiled_multicore
-            .hardware
-            .network_interfaces.iter())
+        .chain(
+            m.partitioned_tiled_multicore
+                .hardware
+                .network_interfaces
+                .iter(),
+        )
         .map(|x| x.to_string())
         .collect();
     let list_schedulers: Vec<String> = m
@@ -1151,12 +1181,7 @@ fn solve_aad2ptm(
         .map(|f| {
             list_schedulers
                 .iter()
-                .flat_map(|r| {
-                    m.partitioned_tiled_multicore
-                        .runtimes
-                        .runtime_host
-                        .get(r)
-                })
+                .flat_map(|r| m.partitioned_tiled_multicore.runtimes.runtime_host.get(r))
                 .map(|pe| {
                     m.instrumented_computation_times
                         .average_execution_times
@@ -1175,20 +1200,11 @@ fn solve_aad2ptm(
         .collect();
     let mappable_to_mappable: Vec<Vec<Option<HashSet<usize>>>> = list_schedulers
         .iter()
-        .flat_map(|s: &String| {
-            m.partitioned_tiled_multicore
-                .runtimes
-                .runtime_host
-                .get(s)
-        })
+        .flat_map(|s: &String| m.partitioned_tiled_multicore.runtimes.runtime_host.get(s))
         .map(|src| {
             list_schedulers
                 .iter()
-                .flat_map(|t: &String| 
-                    m.partitioned_tiled_multicore
-                        .runtimes
-                        .runtime_host
-                        .get(t))
+                .flat_map(|t: &String| m.partitioned_tiled_multicore.runtimes.runtime_host.get(t))
                 .map(|tgt| {
                     m.partitioned_tiled_multicore
                         .hardware
@@ -1210,12 +1226,7 @@ fn solve_aad2ptm(
         .map(|p| {
             list_schedulers
                 .iter()
-                .flat_map(|s| {
-                    m.partitioned_tiled_multicore
-                        .runtimes
-                        .runtime_host
-                        .get(s)
-                })
+                .flat_map(|s| m.partitioned_tiled_multicore.runtimes.runtime_host.get(s))
                 .map(|pe| {
                     m.instrumented_memory_requirements
                         .memory_requirements
@@ -1253,11 +1264,7 @@ fn solve_aad2ptm(
     ));
     input_data.push((
         "Messages",
-        MiniZincData::from(
-            (0..messages.len())
-                .map(|x| x as i32)
-                .collect::<Vec<i32>>(),
-        ),
+        MiniZincData::from((0..messages.len()).map(|x| x as i32).collect::<Vec<i32>>()),
     ));
     input_data.push((
         "Communications",
@@ -1297,7 +1304,15 @@ fn solve_aad2ptm(
     input_data.push(("follows", MiniZincData::from(firings_follows)));
     input_data.push(("receiver", MiniZincData::from(messages_receiver)));
     input_data.push(("sender", MiniZincData::from(messages_sender)));
-    input_data.push(("messageBuffer", MiniZincData::from(messages.iter().map(|x| all_buffers.iter().position(|y| y == x).unwrap() as u64).collect::<Vec<u64>>())));
+    input_data.push((
+        "messageBuffer",
+        MiniZincData::from(
+            messages
+                .iter()
+                .map(|x| all_buffers.iter().position(|y| y == x).unwrap() as u64)
+                .collect::<Vec<u64>>(),
+        ),
+    ));
     input_data.push((
         "slots",
         MiniZincData::from(
@@ -1318,9 +1333,7 @@ fn solve_aad2ptm(
         MiniZincData::from(
             communications
                 .iter()
-                .map(|_| {
-                    0
-                })
+                .map(|_| 0)
                 // .map(|x| x.map(|y| *y as u64).unwrap_or(0))
                 .collect::<Vec<u64>>(),
         ),
@@ -1328,7 +1341,9 @@ fn solve_aad2ptm(
     input_data.push((
         "memorySize",
         MiniZincData::from(
-            m.partitioned_tiled_multicore.hardware.processors
+            m.partitioned_tiled_multicore
+                .hardware
+                .processors
                 .iter()
                 .map(|pe| {
                     m.partitioned_tiled_multicore
@@ -1392,11 +1407,25 @@ fn solve_aad2ptm(
 
     input_data.push((
         "hasInterconnectTo",
-        MiniZincData::from(mappable_to_mappable.iter().map(|x| x.iter().map(|y| y.is_some()).collect()).collect::<Vec<Vec<bool>>>()),
+        MiniZincData::from(
+            mappable_to_mappable
+                .iter()
+                .map(|x| x.iter().map(|y| y.is_some()).collect())
+                .collect::<Vec<Vec<bool>>>(),
+        ),
     ));
     input_data.push((
         "interconnectTo",
-        MiniZincData::from(mappable_to_mappable.iter().map(|x| x.iter().map(|y| y.clone().unwrap_or(HashSet::new())).collect()).collect::<Vec<Vec<HashSet<usize>>>>()),
+        MiniZincData::from(
+            mappable_to_mappable
+                .iter()
+                .map(|x| {
+                    x.iter()
+                        .map(|y| y.clone().unwrap_or(HashSet::new()))
+                        .collect()
+                })
+                .collect::<Vec<Vec<HashSet<usize>>>>(),
+        ),
     ));
     input_data.push(("executionTime", MiniZincData::from(execution_times)));
     input_data.push((
@@ -1428,24 +1457,32 @@ fn solve_aad2ptm(
             current_solutions
                 .iter()
                 .map(|s| {
-                    let mut objs = vec![];
-                    if configuration.target_objectives.is_empty() || configuration.target_objectives.contains("nUsedPEs") {
-                        objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as u64);
+                    let mut objs: Vec<i32> = vec![];
+                    if configuration.target_objectives.is_empty()
+                        || configuration.target_objectives.contains("nUsedPEs")
+                    {
+                        objs.push((*s.objectives.get("nUsedPEs").unwrap_or(&0.0)) as i32);
+                    } else {
+                        objs.push(-1);
                     }
                     for p in &all_processes {
                         let obj_name = format!("invThroughput({})", p);
-                        if configuration.target_objectives.is_empty() || configuration.target_objectives.contains(&obj_name) {
+                        if configuration.target_objectives.is_empty()
+                            || configuration.target_objectives.contains(&obj_name)
+                        {
                             objs.push(
                                 s.objectives
                                     .get(&format!("invThroughput({})", p))
                                     .map(|x| *x / (average_max as f64) * (discrete_max as f64))
-                                    .unwrap_or(0.0) as u64,
+                                    .unwrap_or(0.0) as i32,
                             );
+                        } else {
+                            objs.push(-1);
                         }
                     }
                     objs
                 })
-                .collect::<Vec<Vec<u64>>>(),
+                .collect::<Vec<Vec<i32>>>(),
         ),
     ));
     input_data.push(("connected", MiniZincData::from(connected)));
@@ -1457,20 +1494,21 @@ fn solve_aad2ptm(
     std::fs::write(&model_file, AADPTM_MZN).expect("Could not write the model file");
     std::fs::write(&data_file, to_mzn_input(input_data)).expect("Could not write the data file");
     match std::process::Command::new("minizinc")
-    // .arg("-f")
-    // .arg("-a")
-    .arg("-p")
-    .arg(configuration.parallelism.to_string())
-    .arg("--solver")
-    .arg(minizinc_solver_name)
-            .arg("--json-stream")
-            .arg("--output-mode")
-            .arg("json")
-            .arg(data_file.as_path())
-            .arg(model_file.as_path())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::null())
-            .spawn() {
+        // .arg("-f")
+        // .arg("-a")
+        .arg("-p")
+        .arg(configuration.parallelism.to_string())
+        .arg("--solver")
+        .arg(minizinc_solver_name)
+        .arg("--json-stream")
+        .arg("--output-mode")
+        .arg("json")
+        .arg(data_file.as_path())
+        .arg(model_file.as_path())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+    {
         Ok(proc) => {
             if let Some(stdout) = proc.stdout {
                 let bufreader = BufReader::new(stdout);
@@ -1486,26 +1524,29 @@ fn solve_aad2ptm(
                         // })
                         .flat_map(move |line_r| {
                             if let Ok(line) = line_r {
-                                if line.contains("UNSATISFIABLE") || line.contains("ALL SOLUTIONS") {
+                                if line.contains("UNSATISFIABLE") || line.contains("ALL SOLUTIONS")
+                                {
                                     return None;
                                 } else if line.contains("output") {
                                     let mzn_out: MiniZincSolutionOutput<AADPTMMznOutput> =
-                                        serde_json::from_str(line.as_str())
-                                            .expect("Should not fail to parse the output of minizinc");
+                                        serde_json::from_str(line.as_str()).expect(
+                                            "Should not fail to parse the output of minizinc",
+                                        );
                                     let mut explored = input.clone();
                                     if let Some(mzn_vars) = mzn_out.output.get("json") {
-                                        let list_schedulers_mapping: HashMap<String, String> = mzn_vars
-                                            .process_mapping
-                                            .iter()
-                                            .enumerate()
-                                            .filter(|(_, r)| **r < list_schedulers.len() as u64)
-                                            .map(|(p, r)| {
-                                                (
-                                                    all_processes[p].clone(),
-                                                    list_schedulers[*r as usize].clone(),
-                                                )
-                                            })
-                                            .collect();
+                                        let list_schedulers_mapping: HashMap<String, String> =
+                                            mzn_vars
+                                                .process_mapping
+                                                .iter()
+                                                .enumerate()
+                                                .filter(|(_, r)| **r < list_schedulers.len() as u64)
+                                                .map(|(p, r)| {
+                                                    (
+                                                        all_processes[p].clone(),
+                                                        list_schedulers[*r as usize].clone(),
+                                                    )
+                                                })
+                                                .collect();
                                         explored.processes_to_runtime_scheduling =
                                             list_schedulers_mapping.clone();
                                         explored.processes_to_memory_mapping = mzn_vars
@@ -1524,7 +1565,10 @@ fn solve_aad2ptm(
                                             .iter()
                                             .enumerate()
                                             .map(|(b, i)| {
-                                                (all_buffers[b].clone(), memories[*i as usize].clone())
+                                                (
+                                                    all_buffers[b].clone(),
+                                                    memories[*i as usize].clone(),
+                                                )
                                             })
                                             .collect();
                                         let firings: Vec<(&str, u64)> = all_firings_actor
@@ -1570,7 +1614,10 @@ fn solve_aad2ptm(
                                                 })
                                                 .collect();
                                         let mut objs = HashMap::new();
-                                        objs.insert("nUsedPEs".to_string(), mzn_vars.n_used_pes as f64);
+                                        objs.insert(
+                                            "nUsedPEs".to_string(),
+                                            mzn_vars.n_used_pes as f64,
+                                        );
                                         let inv_throughputs = explored.recompute_throughputs();
                                         for (p, inv) in &inv_throughputs {
                                             objs.insert(
@@ -1600,7 +1647,10 @@ pub fn make_module() -> RustEmbeddedModule {
         .unique_identifier("MiniZincModule".to_string())
         .identification_rules(vec![])
         // .explorers(vec![Arc::new(MiniZincGecodeExplorer)])
-        .explorers(vec![Arc::new(MiniZincORToolsExplorer), Arc::new(MiniZincGecodeExplorer)])
+        .explorers(vec![
+            Arc::new(MiniZincORToolsExplorer),
+            Arc::new(MiniZincGecodeExplorer),
+        ])
         .build()
         .expect("Failed to build MiniZincModule. Should never happen.")
 }

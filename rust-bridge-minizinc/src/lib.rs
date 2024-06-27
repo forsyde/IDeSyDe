@@ -1600,7 +1600,7 @@ pub fn make_module() -> RustEmbeddedModule {
         .unique_identifier("MiniZincModule".to_string())
         .identification_rules(vec![])
         // .explorers(vec![Arc::new(MiniZincGecodeExplorer)])
-        .explorers(vec![Arc::new(MiniZincORToolsExplorer)])
+        .explorers(vec![Arc::new(MiniZincORToolsExplorer), Arc::new(MiniZincGecodeExplorer)])
         .build()
         .expect("Failed to build MiniZincModule. Should never happen.")
 }

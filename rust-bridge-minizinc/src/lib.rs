@@ -1513,6 +1513,7 @@ fn solve_aad2ptm(
             if let Some(stdout) = proc.stdout {
                 let bufreader = BufReader::new(stdout);
                 let input = m.clone();
+                let configuration = configuration.clone();
                 return Arc::new(Mutex::new(
                     bufreader
                         .lines()
@@ -1614,16 +1615,20 @@ fn solve_aad2ptm(
                                                 })
                                                 .collect();
                                         let mut objs = HashMap::new();
-                                        objs.insert(
-                                            "nUsedPEs".to_string(),
-                                            mzn_vars.n_used_pes as f64,
-                                        );
+                                        if configuration.target_objectives.is_empty() || configuration.target_objectives.contains("nUsedPEs") {
+                                            objs.insert(
+                                                "nUsedPEs".to_string(),
+                                                mzn_vars.n_used_pes as f64,
+                                            );
+                                        }
                                         let inv_throughputs = explored.recompute_throughputs();
                                         for (p, inv) in &inv_throughputs {
-                                            objs.insert(
-                                                format!("invThroughput({})", p),
-                                                *inv as f64,
-                                            );
+                                            if configuration.target_objectives.is_empty() || configuration.target_objectives.contains(format!("invThroughput({})", p).as_str()) {
+                                                objs.insert(
+                                                    format!("invThroughput({})", p),
+                                                    *inv as f64,
+                                                );
+                                            }
                                         }
                                         return Some(ExplorationSolution {
                                             solved: Arc::new(explored),

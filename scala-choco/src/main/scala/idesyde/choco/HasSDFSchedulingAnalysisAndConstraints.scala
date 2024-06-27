@@ -203,6 +203,17 @@ trait HasSDFSchedulingAnalysisAndConstraints
     // }
     // -----/
     // throughput
+    for (i <- 0 until invThroughputs.size) {
+      chocoModel
+        .arithm(
+          invThroughputs(i),
+          ">=",
+          durations(i),
+          "+",
+          chocoModel.sum(s"MinInvThroughput($i)", transmissionDelay(i)*)
+        )
+        .post()
+    }
     val thPropagator = StreamingJobsThroughputPropagator(
       jobsAndActors,
       jobGraphWithoutCycles,

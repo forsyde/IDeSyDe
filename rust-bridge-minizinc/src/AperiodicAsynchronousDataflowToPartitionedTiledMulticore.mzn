@@ -48,8 +48,9 @@ array[Buffers] of var int: durationBufferMessage;
 
 % array[Firings] of var opt Firings: orderNext;
 % array[Messages] of var opt Messages: orderNextMessages;
+% set of int: FiringsWithMessages = 0..(card(Firings) + card(Messages) - 1);
+% set of int: PathMessages = (card(Firings) - 1 )..(card(Firings) + card(Messages) - 1);
 array[Firings, Firings] of var int: maxPath;
-array[Firings, Firings] of var int: maxPathMessages;
 
 array[Processes] of var int: invThroughput;
 var 0..card(Tiles): nUsedPEs;
@@ -68,7 +69,7 @@ int: maxTh = sum(p in Processes) (max([e | e in executionTime[p, ..] where e >= 
 constraint forall(p in Processes) (invThroughput[p] <= maxTh);
 constraint forall(p in Processes) (invThroughput[p] >= min([e | e in executionTime[p, ..] where e >= 0]));
 constraint forall(f, ff in Firings) (maxPath[f, ff] >= 0.0);
-constraint forall(f, ff in Firings) (maxPathMessages[f, ff] >= 0.0);
+% constraint forall(f, ff in Firings) (maxPathMessages[f, ff] >= 0.0);
 
 constraint forall(p in Processes, pe in Tiles where executionTime[p, pe] < 0) (processMapping[p] != pe);
 
@@ -139,47 +140,42 @@ constraint nvalue(nUsedPEs, processMapping);
 %   maxPath[f, pe] = max([incomingMessages, previousFirings])
 % );
 constraint forall(f in Firings) (
-  maxPath[f, f] = duration[firingsActor[f]]
+  maxPath[f, f] >= duration[firingsActor[f]]
 );
 constraint forall(f in Firings) (
-  maxPathMessages[f, f] = sum(b in Buffers where processesWriteBuffer[firingsActor[f], b] > 0) (durationBufferMessage[b])
+  maxPath[f, f] >= sum(b in Buffers where processesWriteBuffer[firingsActor[f], b] > 0) (durationBufferMessage[b])
 );
-constraint forall(fi, fj, fk in Firings where fi != fj /\ fk in follows[fi]) (
-  maxPath[fi, fj] >= duration[firingsActor[fi]] + maxPathMessages[fk, fj]
+% constraint forall(m in Messages) (
+%   let {
+%     int: mp = m + card(Firings);
+%   } in
+%   maxPath[mp, mp] = durationBufferMessage[messageBuffer[m]]
+% );
+% constraint forall(f in Firings) (
+%   maxPathMessages[f, f] = sum(b in Buffers where processesWriteBuffer[firingsActor[f], b] > 0) (durationBufferMessage[b])
+% );
+
+constraint forall(fi in Firings, j in Firings, k in Firings where fi != j /\ k in follows[fi] /\ processMapping[firingsActor[fi]] != processMapping[firingsActor[k]]) (
+  maxPath[fi, j] >= duration[firingsActor[fi]] + sum(b in Buffers where processesWriteBuffer[firingsActor[fi], b] > 0) (durationBufferMessage[b]) + maxPath[k, j]
 );
 constraint forall(fi, fj, fk in Firings where fi != fj /\ fi != fk /\ processMapping[firingsActor[fi]] = processMapping[firingsActor[fk]] /\ firingsOrdering[fk] > firingsOrdering[fi]) (
   maxPath[fi, fj] >= duration[firingsActor[fi]] + maxPath[fk, fj]
 );
-
-% constraint forall(f in Firings, pe in Tiles) ( % where firingsOrdering[f] > 0 \/ processMapping[firingsActor[f]] != pe) (
-%   let {
-%     var int: previousMessages = max([0] ++ [maxPathMessages[ff, pe] | ff in Firings, m in Messages where processMapping[firingsActor[f]] = processMapping[firingsActor[ff]] /\ firingsOrdering[f] > firingsOrdering[ff]]);
-%   } in
-%   maxPathMessages[f, pe] = sum(m in Messages where sender[m] = f) (durationBufferMessage[messageBuffer[m]]) + max([maxPath[f, pe], previousMessages])
-% );
-constraint forall(fi, fj in Firings, m in Messages where fi != fj /\ sender[m] = fi) (
-  maxPathMessages[fi, fj] >= durationBufferMessage[messageBuffer[m]] + maxPath[receiver[m], fj]
-);
 constraint forall(fi, fj, fk in Firings where fi != fj /\ fi != fk /\ processMapping[firingsActor[fi]] = processMapping[firingsActor[fk]] /\ firingsOrdering[fk] > firingsOrdering[fi]) (
-  maxPathMessages[fi, fj] >= sum(m in Messages where sender[m] = fi) (durationBufferMessage[messageBuffer[m]]) + maxPathMessages[fk, fj]
+  maxPath[fi, fj] >= sum(b in Buffers where processesWriteBuffer[firingsActor[fi], b] > 0) (durationBufferMessage[b]) + maxPath[fk, fj]
 );
+% constraint forall(i, j, k in Messages where i != j /\ i != k /\ buffersMapping[messageBuffer[i]] = buffersMapping[messageBuffer[k]] /\ firingsOrdering[sender[k]] > firingsOrdering[sender[i]]) (
+%   let {
+%     int: ip = i + card(Firings);
+%     int: jp = j + card(Firings);
+%     int: kp = k + card(Firings);
+%   } in
+%   maxPath[ip, jp] >= durationBufferMessage[messageBuffer[i]] + maxPath[kp, jp]
+% );
 
 
 constraint forall(p, pp in Processes where p != pp) (processMapping[p] = processMapping[pp] -> invThroughput[p] = invThroughput[pp]);
 constraint forall(p, pp in Processes where p != pp /\ connected[p, pp]) (invThroughput[p] = invThroughput[pp]);
-
-% constraint forall(a in Processes) (
-%   let {
-%     var int: selfCycle = duration[a] + sum(b in Buffers where processesWriteBuffer[a, b] > 0) (durationBufferMessage[b]);
-%     % var int: maxPathConnected = max(f in Firings, aa in Processes where firingsActor[f] = aa /\ connected[a, aa]) (maxPath[f, processMapping[a]]);
-%     % var int: maxPathMessagesConnected = max(f in Firings, aa in Processes where firingsActor[f] = aa /\ connected[a, aa]) (maxPathMessages[f, processMapping[a]]);
-%     var int: maxThConnected = max(aa in Processes where a != aa /\ connected[a, aa]) (invThroughput[aa]);
-%     var int: maxPathSameTile = max(f in Firings, aa in Processes where firingsActor[f] = aa /\ processMapping[a] = processMapping[aa]) (maxPath[f, processMapping[a]]);
-%     var int: maxPathMessageSameTile = max(f in Firings, aa in Processes where firingsActor[f] = aa /\ processMapping[a] = processMapping[aa]) (maxPathMessages[f, processMapping[a]]);
-%   } in
-%   maximum(invThroughput[a], [selfCycle, maxPathSameTile, maxPathMessageSameTile, maxThConnected])
-%   % invThroughput[a] = max([selfCycle, maxPathSameTile, maxPathMessageSameTile, maxThConnected])
-% );
 
 constraint forall(a in Processes) (
   invThroughput[a] >= duration[a] + sum(b in Buffers where processesWriteBuffer[a, b] > 0) (durationBufferMessage[b])
@@ -188,9 +184,16 @@ constraint forall(a in Processes) (
 constraint forall(f, ff in Firings where processMapping[firingsActor[f]] = processMapping[firingsActor[ff]] /\ f != ff) (
   invThroughput[firingsActor[f]] >= maxPath[f, ff]
 );
-constraint forall(f, ff in Firings where processMapping[firingsActor[f]] = processMapping[firingsActor[ff]] /\ f != ff) (
-  invThroughput[firingsActor[f]] >= maxPathMessages[f, ff]
-);
+% constraint forall(m, mm in Messages where buffersMapping[messageBuffer[m]] = buffersMapping[messageBuffer[mm]] /\ m != mm) (
+%   let {
+%     int: mp = m + card(Firings);
+%     int: mmp = mm + card(Firings);
+%   } in
+%   invThroughput[firingsActor[sender[m]]] >= maxPath[mp, mmp]
+% );
+% constraint forall(f, ff in Firings where processMapping[firingsActor[f]] = processMapping[firingsActor[ff]] /\ f != ff) (
+%   invThroughput[firingsActor[f]] >= maxPathMessages[f, ff]
+% );
 
 
 constraint forall(solNum in 1..nPareto) (
@@ -217,20 +220,17 @@ solve
         communicationReservation, first_fail, indomain_min
       ),
       int_search(
-    duration, first_fail, indomain_min
-  ),
-  int_search(
-    durationBufferMessage, first_fail, indomain_min
-  ),
+        duration, first_fail, indomain_min
+      ),
       int_search(
-    maxPath, input_order, indomain_min
-  ),
-  int_search(
-    maxPathMessages, input_order, indomain_min
-  ),
+          durationBufferMessage, first_fail, indomain_min
+      ),
+          int_search(
+          maxPath, input_order, indomain_min
+      ),
       int_search(
-            invThroughput, input_order, indomain_min
-        )
+          invThroughput, input_order, indomain_min
+      ),
     ]
   ) 
   :: warm_start(processMapping, [arg_min([executionTime[p, pe] | pe in Tiles where executionTime[p, pe] > 0]) | p in Processes]) 

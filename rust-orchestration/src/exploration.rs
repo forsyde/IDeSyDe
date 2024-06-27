@@ -325,23 +325,10 @@ pub fn explore_level_non_blocking(
             None
         };
         rayon::spawn(move || {
-            // if let Some(duration) = time_out_duration {
-            //     if Instant::now().elapsed() >= duration {
-            //         return;
-            //     }
-            // }
-            // if this_status
-            //     .lock()
-            //     .map(|x| *x == ExplorationStatus::Dominated || *x == ExplorationStatus::Optimal)
-            //     .unwrap_or(true)
-            // {
-            //     return;
-            // }
-            // if let Some(conf) = configurations.pop_front() {
-            // let tout = conf.improvement_timeout.to_owned();
             let iter_mutex =
                 explorer.explore(model.to_owned(), &current_solutions, conf.to_owned());
             let start = Instant::now();
+            let mut found_new = false;
             if let Ok(mut iter) = iter_mutex.lock() {
                 while let Some(sol) = iter.next() {
                     if current_solutions
@@ -349,6 +336,7 @@ pub fn explore_level_non_blocking(
                         .all(|cur| cur.partial_cmp(&sol) != Some(Ordering::Less))
                         && !current_solutions.contains(&sol)
                     {
+                        found_new = true;
                         match level_tx.send(sol) {
                             Ok(_) => (),
                             Err(_) => return,
@@ -369,10 +357,7 @@ pub fn explore_level_non_blocking(
                         return;
                     }
                 }
-                if this_status
-                    .lock()
-                    .map(|x| *x != ExplorationStatus::Dominated)
-                    .unwrap_or(false)
+                if !found_new
                     && is_exact
                     && time_out_duration
                         .map(|improv_tout| improv_tout > start.elapsed())
@@ -490,22 +475,29 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                             // .lock()
                             // .map(|x| *x == ExplorationStatus::Optimal)
                             // .unwrap_or(false);
-                            // let all_optimal_finished = (0..self.levels_streams.len())
-                            // .filter(|i| self.levels_is_exact[*i]).all(|i| 
-                            //     self.levels_status[i]
-                            //         .lock()
-                            //         .map(|x| *x == ExplorationStatus::Optimal)
-                            //         .unwrap_or(false)
-                            
+                            let all_optimal_finished = (0..self.levels_streams.len())
+                                .filter(|i| self.levels_is_exact[*i])
+                                .all(|i| {
+                                    self.levels_status[i]
+                                        .lock()
+                                        .map(|x| *x == ExplorationStatus::Optimal)
+                                        .unwrap_or(false)
+                                });
+                            // println!(
+                            //     "Disconnecting. Levels are: {}",
+                            //     self.levels_status
+                            //         .iter()
+                            //         .map(|x| format!("{:?}", x.lock().unwrap()))
+                            //         .collect::<Vec<String>>()
+                            //         .join(", ")
                             // );
-                            // println!("Disconnected level with left: {}, {}", all_optimal_finished, self.levels_streams.len());
                             self.levels_streams.remove(i);
                             self.levels_status.remove(i);
                             self.levels_start.remove(i);
                             self.levels_is_exact.remove(i);
-                            // if all_optimal_finished {
-                            //     return None;
-                            // }
+                            if all_optimal_finished {
+                                return None;
+                            }
                             break;
                         }
                     }

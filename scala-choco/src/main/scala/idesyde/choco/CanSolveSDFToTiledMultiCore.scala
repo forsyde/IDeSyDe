@@ -70,7 +70,9 @@ final class CanSolveSDFToTiledMultiCore
     def double2int(s: Double) = discretized(
       if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
       else if (configuration.timeDiscretizationFactor <= 0L)
-        m.sdfApplications.actorSizes.size * m.sdfApplications.actorSizes.size * scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
+        m.sdfApplications.actorSizes.size * m.sdfApplications.actorSizes.size * scala.math
+          .ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0)
+          .toInt
       else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(s)
@@ -521,7 +523,9 @@ final class CanSolveSDFToTiledMultiCore
     def int2double(d: Int) = undiscretized(
       if (configuration.timeDiscretizationFactor > Int.MaxValue) Int.MaxValue
       else if (configuration.timeDiscretizationFactor <= 0L)
-        m.sdfApplications.actorSizes.size * scala.math.ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0).toInt
+        m.sdfApplications.actorSizes.size * scala.math
+          .ceil(log2(m.platform.runtimes.schedulers.length) + 5 * log2(10) - 1.0)
+          .toInt
       else configuration.timeDiscretizationFactor.toInt,
       timeValues.sum
     )(d)
@@ -678,10 +682,13 @@ final class CanSolveSDFToTiledMultiCore
   ): Vector[Double] = {
 
     val maxCycles = Buffer.fill(jobWeight.size)(0.0)
-
     val jobs =
       m.sdfApplications.jobsAndActors
     val nJobs = jobs.size
+
+    for (i <- 0 until nJobs) {
+      maxCycles(i) = Math.max(maxCycles(i), jobWeight(i) + edgeWeight(i).sum)
+    }
 
     val mappingGraph = DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])
     jobs.foreach(job => mappingGraph.addVertex(job))

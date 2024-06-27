@@ -189,9 +189,9 @@ constraint forall(f in Firings) (
 
 
 constraint forall(solNum in 1..nPareto) (
-  (previousSolutions[solNum, 1] > -1 -> nUsedPEs < previousSolutions[solNum, 1]) \/
-  exists(proc in 2..(card(Processes)+1)) (
-    (previousSolutions[solNum, proc] > -1 -> invThroughput[proc - 2] < previousSolutions[solNum, proc])
+  (if previousSolutions[solNum, 1] > -1 then nUsedPEs < previousSolutions[solNum, 1] else false endif) \/
+  exists(proc in 2..(card(Processes)+1) where previousSolutions[solNum, proc] > -1) (
+    (invThroughput[proc - 2] < previousSolutions[solNum, proc])
   )
 );
 

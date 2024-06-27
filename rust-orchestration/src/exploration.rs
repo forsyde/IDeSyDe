@@ -452,6 +452,7 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                 self.current_solutions.retain(|cur_sol| {
                                     solution.partial_cmp(cur_sol) != Some(Ordering::Less)
                                 });
+                                // println!("New level");
                                 let (is_dominated, new_level) = explore_level_non_blocking(
                                     &self.explorers_and_models,
                                     self.biddings.as_slice(),
@@ -461,7 +462,8 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                                 self.levels_streams.push(new_level);
                                 self.levels_status.push(is_dominated);
                                 self.levels_start.push(Instant::now());
-                                self.levels_is_exact.push(self.biddings.iter().any(|x| x.is_exact));
+                                self.levels_is_exact
+                                    .push(self.biddings.iter().any(|x| x.is_exact));
                                 // if sol_dominates {
                                 // }
                                 return Some(solution);
@@ -484,17 +486,26 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                             }
                         }
                         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                            let optimal = self.levels_status[i]
-                            .lock()
-                            .map(|x| *x == ExplorationStatus::Optimal)
-                            .unwrap_or(false);
+                            // let optimal = self.levels_status[i]
+                            // .lock()
+                            // .map(|x| *x == ExplorationStatus::Optimal)
+                            // .unwrap_or(false);
+                            // let all_optimal_finished = (0..self.levels_streams.len())
+                            // .filter(|i| self.levels_is_exact[*i]).all(|i| 
+                            //     self.levels_status[i]
+                            //         .lock()
+                            //         .map(|x| *x == ExplorationStatus::Optimal)
+                            //         .unwrap_or(false)
+                            
+                            // );
+                            // println!("Disconnected level with left: {}, {}", all_optimal_finished, self.levels_streams.len());
                             self.levels_streams.remove(i);
                             self.levels_status.remove(i);
                             self.levels_start.remove(i);
                             self.levels_is_exact.remove(i);
-                            if optimal && self.levels_is_exact.iter().all(|x| !*x) {
-                                return None;
-                            }
+                            // if all_optimal_finished {
+                            //     return None;
+                            // }
                             break;
                         }
                     }

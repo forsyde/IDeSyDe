@@ -178,7 +178,7 @@ constraint forall(p, pp in Processes where p != pp) (processMapping[p] = process
 constraint forall(p, pp in Processes where p != pp /\ connected[p, pp]) (invThroughput[p] = invThroughput[pp]);
 
 constraint forall(a in Processes) (
-  invThroughput[a] >= duration[a] + sum(b in Buffers where processesWriteBuffer[a, b] > 0) (durationBufferMessage[b])
+  invThroughput[a] >= max([duration[a], sum(b in Buffers where processesWriteBuffer[a, b] > 0) (durationBufferMessage[b])])
 );
 
 constraint forall(f, ff in Firings where processMapping[firingsActor[f]] = processMapping[firingsActor[ff]] /\ f != ff) (

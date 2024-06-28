@@ -687,7 +687,7 @@ final class CanSolveSDFToTiledMultiCore
     val nJobs = jobs.size
 
     for (i <- 0 until nJobs) {
-      maxCycles(i) = Math.max(maxCycles(i), jobWeight(i) + edgeWeight(i).sum)
+      maxCycles(i) = Math.max(maxCycles(i), Math.max(jobWeight(i), edgeWeight(i).sum))
     }
 
     val mappingGraph = DefaultDirectedGraph[(String, Int), DefaultEdge](classOf[DefaultEdge])

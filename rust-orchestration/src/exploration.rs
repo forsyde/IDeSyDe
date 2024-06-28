@@ -471,10 +471,10 @@ impl Iterator for MultiLevelCombinedExplorerIterator3 {
                             }
                         }
                         Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                            // let optimal = self.levels_status[i]
-                            // .lock()
-                            // .map(|x| *x == ExplorationStatus::Optimal)
-                            // .unwrap_or(false);
+                            let optimal = self.levels_status[i]
+                            .lock()
+                            .map(|x| *x == ExplorationStatus::Optimal)
+                            .unwrap_or(false);
                             let all_optimal_finished = (0..self.levels_streams.len())
                                 .filter(|i| self.levels_is_exact[*i])
                                 .all(|i| {

@@ -142,7 +142,7 @@ interface AperiodicAsynchronousDataflowMethods {
         // now add cycles created by the transmission of messages
         for (int i = 0; i < numJobs; i++) {
             var finalI = i;
-            maxCycles.put(i, Math.max(maxCycles.getOrDefault(i, 0.0), jobWeights[i] + IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum()));
+            maxCycles.put(i, Math.max(maxCycles.getOrDefault(i, 0.0), Math.max(jobWeights[i], IntStream.range(0, numJobs).mapToDouble(j -> edgeWeigths[finalI][j]).sum())));
         }
         // System.out.println("A maxCycles: " + maxCycles);
         var mappedInspector = new ConnectivityInspector<>(mappingGraph);

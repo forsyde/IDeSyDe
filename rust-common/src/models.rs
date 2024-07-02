@@ -845,30 +845,32 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
                 .zip(app.job_graph_dst_name.iter())
                 .zip(app.job_graph_dst_instance.iter())
             {
-                let srcf = *jobs_to_idx.get(&(srca.as_str(), *srcq)).expect("Should have all jobs added. Impossible error.");
-                let dstf = *jobs_to_idx.get(&(dsta.as_str(), *dstq)).expect("Should have all jobs added. Impossible error.");
-                for b in &app.buffers {
-                    if app
-                        .process_put_in_buffer_in_bits
-                        .get(srca)
-                        .and_then(|x| x.get(b))
-                        .is_some()
-                    {
+                if self.processes_to_runtime_scheduling.get(srca).and_then(|xa| self.processes_to_runtime_scheduling.get(dsta).map(|ya| xa != ya)).unwrap_or(true) {
+                    let srcf = *jobs_to_idx.get(&(srca.as_str(), *srcq)).expect("Should have all jobs added. Impossible error.");
+                    let dstf = *jobs_to_idx.get(&(dsta.as_str(), *dstq)).expect("Should have all jobs added. Impossible error.");
+                    for b in &app.buffers {
                         if app
-                            .process_get_from_buffer_in_bits
-                            .get(dsta)
+                            .process_put_in_buffer_in_bits
+                            .get(srca)
                             .and_then(|x| x.get(b))
                             .is_some()
                         {
-                            let cur_idx = *messages_max_idx.get(b.as_str()).unwrap_or(&1);
-                            let midx = full_graph.add_node((b.as_str(), cur_idx));
-                            full_graph.add_edge(
-                                srcf,
-                                midx,
-                                *actor_times.get(srca.as_str()).unwrap_or(&0.0),
-                            );
-                            full_graph.add_edge(midx, dstf, *buffer_times.get(b.as_str()).unwrap_or(&0.0));
-                            messages_max_idx.insert(b.as_str(), cur_idx + 1);
+                            if app
+                                .process_get_from_buffer_in_bits
+                                .get(dsta)
+                                .and_then(|x| x.get(b))
+                                .is_some()
+                            {
+                                let cur_idx = *messages_max_idx.get(b.as_str()).unwrap_or(&1);
+                                let midx = full_graph.add_node((b.as_str(), cur_idx));
+                                full_graph.add_edge(
+                                    srcf,
+                                    midx,
+                                    *actor_times.get(srca.as_str()).unwrap_or(&0.0),
+                                );
+                                full_graph.add_edge(midx, dstf, *buffer_times.get(b.as_str()).unwrap_or(&0.0));
+                                messages_max_idx.insert(b.as_str(), cur_idx + 1);
+                            }
                         }
                     }
                 }

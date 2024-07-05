@@ -45,8 +45,7 @@ array[Processes] of var int: durationFetch;
 array[Processes] of var int: durationRead;
 array[Processes] of var int: durationWrite;
 
-array[Firings] of var opt Firings: orderNext;
-array[Firings, Firings] of var int: maxPath;
+array[Firings, Mappable] of var int: maxPath;
 
 array[Processes] of var int: invThroughput;
 var 0..card(Mappable): nUsedPEs;
@@ -127,39 +126,33 @@ constraint forall(p in Processes)(duration[p] = durationFetch[p] + executionTime
 
 constraint forall(f, ff in Firings where f != ff /\ ff in follows[f]) (processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] -> firingsOrdering[f] < firingsOrdering[ff]);
 
-constraint forall(f, ff in Firings where f != ff) (processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] -> firingsOrdering[f] != firingsOrdering[ff]);
+constraint diffn([processMapping[firingsActor[f]]| f in Firings], [firingsOrdering[f] | f in Firings], [1 | f in Firings], [1 | f in Firings]);
 
 constraint forall(pe in ListSchedulers, f in Firings) (processesExecution[firingsActor[f]] = pe -> count_lt([processesExecution[firingsActor[ff]] | ff in Firings], pe, firingsOrdering[f]));
 
 constraint nvalue(nUsedPEs, processesExecution);
 
-constraint forall(f in Firings) (orderNext[f] != f);
-constraint forall(f, ff in Firings where f != ff) (processesExecution[firingsActor[f]] != processesExecution[firingsActor[ff]] -> orderNext[f] != ff);
-constraint forall(f, ff in Firings where f != ff) (processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] /\ firingsOrdering[f] + 1 = firingsOrdering[ff] <-> orderNext[f] = ff);
-
-
-constraint forall(f in Firings) (maxPath[f, f] = duration[firingsActor[f]]);
-constraint forall(f, ff in Firings where f != ff) (
-  maxPath[f, ff] >= duration[firingsActor[f]] + max([0] ++ [maxPath[next, ff] | next in follows[f] where ff in follows[next]])
+constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] = 0 /\ processMapping[firingsActor[f]] = pe) (
+    maxPath[f, pe] = duration[firingsActor[f]]
 );
-constraint forall(f, ff in Firings where f != ff) (
-  let { var int: pe = processesExecution[firingsActor[f]] } in
-  if pe in ListSchedulers then
-    maxPath[f, ff] >= duration[firingsActor[f]] + maxPath[orderNext[f], ff]
-  endif
+constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] = 0 /\ processMapping[firingsActor[f]] != pe) (
+    maxPath[f, pe] = duration[firingsActor[f]] + max([-maxTh] ++ [maxPath[ff, pe] | ff in Firings where f in follows[ff]])
 );
-
-
-constraint forall(p, pp in Processes where p != pp) (processesExecution[p] = processesExecution[pp] -> invThroughput[p] = invThroughput[pp]);
-constraint forall(p, pp in Processes where p != pp) (connected[p, pp] -> invThroughput[p] = invThroughput[pp]);
+constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] > 0) (
+    maxPath[f, pe] = duration[firingsActor[f]] + max(
+        [maxPath[ff, pe] | ff in Firings where f != ff /\ processMapping[firingsActor[f]]  = processMapping[firingsActor[ff]] /\ firingsOrdering[f] > firingsOrdering[ff]] ++ 
+        [maxPath[ff, pe] | ff in Firings where f != ff /\ processMapping[firingsActor[f]] != processMapping[firingsActor[ff]] /\ f in follows[ff]]
+    )
+);
 
 constraint forall(a in Processes) (
-    invThroughput[a] >= duration[a]
+  let {
+    var int: maxCycleConnected = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where connected[firingsActor[f], a]]);
+    var int: maxCycleComapped = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where processMapping[firingsActor[f]] = processMapping[a]])
+  } in
+  invThroughput[a] = max([duration[a], maxCycleConnected, maxCycleComapped])
 );
 
-constraint forall(f, ff in Firings where f != ff /\ processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] /\ firingsOrdering[f] < firingsOrdering[ff]) (
-  invThroughput[firingsActor[f]] >= maxPath[f, ff]
-);
 
 constraint forall(solNum in 1..nPareto) (
   (previousSolutions[solNum, 1] > -1 -> nUsedPEs < previousSolutions[solNum, 1]) \/

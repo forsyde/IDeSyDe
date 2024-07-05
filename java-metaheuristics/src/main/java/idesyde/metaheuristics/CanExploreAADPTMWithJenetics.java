@@ -221,7 +221,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 .builder(g -> evaluateAADPTM(g, jobs, jobIdxGraph, configuration),
                         allConstraints.constrain(codec))
                 .offspringSelector(new TournamentSelector<>(5))
-                // .executor(Executors.newSingleThreadExecutor())
+                .executor(Executors.newSingleThreadExecutor())
                 .survivorsSelector(UFTournamentSelector.ofVec())
                 .constraint(allConstraints)
                 .alterers(
@@ -243,7 +243,9 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                 : timedSolStream;
         return limitedImprovementStream
                 .map(sol -> {
+                // System.out.println("Decoding");
                     var decoded = codec.decode(sol.bestPhenotype().genotype());
+                //     System.out.println("Decoded");
                     var solMap = new HashMap<String, Double>(sol.bestFitness().length());
                     var bestFit = sol.bestFitness().data();
                     var i = 0;
@@ -266,6 +268,7 @@ public interface CanExploreAADPTMWithJenetics extends AperiodicAsynchronousDataf
                             }
                         }
                     }
+                //     System.out.println("Returning");
                     return new ExplorationSolution(solMap, decoded);
                 });
     }

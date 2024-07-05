@@ -6,9 +6,7 @@ use std::{
 };
 
 use idesyde_core::{
-    DecisionModel, DesignModel, ExplorationBid, ExplorationConfiguration, ExplorationSolution,
-    Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, Module,
-    OpaqueDecisionModel, OpaqueDesignModel, ReverseIdentificationRuleLike,
+    DecisionModel, DesignModel, ExplorationBid, ExplorationConfiguration, ExplorationEvent, ExplorationSolution, Explorer, IdentificationResult, IdentificationRuleLike, LoggedResult, Module, OpaqueDecisionModel, OpaqueDesignModel, ReverseIdentificationRuleLike
 };
 use jni::{
     objects::{GlobalRef, JObject, JObjectArray, JPrimitiveArray, JString, JValue},
@@ -403,6 +401,16 @@ impl<'a> FromJava<'a, JObject<'a>> for f64 {
     }
 }
 
+impl<'a> FromJava<'a, JObject<'a>> for bool {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<bool, jni::errors::Error> {
+        env.with_local_frame(32, |inner| {
+            inner
+                .call_method(&obj, "booleanValue", "()Z", &[])
+                .and_then(|x| x.z())
+        })
+    }
+}
+
 impl<'a> FromJava<'a, JObject<'a>> for String {
     fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<String, jni::errors::Error> {
         env.with_local_frame_returning_local(256, |inner| {
@@ -707,6 +715,30 @@ impl<'a> FromJava<'a, JObject<'a>> for ExplorationSolution {
     }
 }
 
+
+impl<'a> FromJava<'a, JObject<'a>> for ExplorationEvent {
+    fn from_java(env: &mut JNIEnv<'a>, obj: JObject<'a>) -> Result<Self, jni::errors::Error> {
+        let solution_opt: JObject = env
+            .call_method(&obj, "solution", "()Ljava/util/Optional;", &[])?
+            .l()?;
+        let solution = if let Ok(true) = env.call_method(&solution_opt, "isPresent", "()Z", &[]).and_then(|x| x.z()) {
+            let java_model: JObject = env
+                        .call_method(&solution_opt, "get", "()Ljava/lang/Object;", &[])?
+                        .l()?;
+            ExplorationSolution::from_java(env, java_model).ok()
+        } else {
+            None
+        };
+        Ok(ExplorationEvent {
+            solution,
+            optimality_proved: env.call_method(&obj, "optimalityProved", "()Ljava/lang/Boolean;", &[])
+            .and_then(|x| x.l())
+            .and_then(|x| env.call_method(&x, "booleanValue", "()Z", &[]))
+            .and_then(|x| x.z()).unwrap_or(false),
+        })
+    }
+}
+
 #[derive(Clone)]
 struct JavaModuleIdentificationRule {
     pub java_vm: Arc<JavaVM>,
@@ -875,7 +907,7 @@ pub struct JavaModuleExplorer {
 }
 
 impl Iterator for JavaModuleExplorerationIter {
-    type Item = idesyde_core::ExplorationSolution;
+    type Item = idesyde_core::ExplorationEvent;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Ok(mut env) = self.java_vm.attach_current_thread_permanently() {
@@ -885,9 +917,12 @@ impl Iterator for JavaModuleExplorerationIter {
             if has_next.map(|x| x == true).unwrap_or(false) {
                 let next_java_opt = env
                     .call_method(&self.iter, "next", "()Ljava/lang/Object;", &[])
+                    .inspect_err(|_| {let _ = env.exception_describe();})
                     .and_then(|x| x.l());
                 if let Ok(next_java) = next_java_opt {
-                    return ExplorationSolution::from_java(&mut env, next_java).ok();
+                    return ExplorationEvent::from_java(&mut env, next_java).ok();
+                } else {
+                    let _ = env.exception_describe();
                 }
             }
         }
@@ -953,7 +988,7 @@ impl Explorer for JavaModuleExplorer {
         m: Arc<dyn DecisionModel>,
         currrent_solutions: &HashSet<idesyde_core::ExplorationSolution>,
         exploration_configuration: idesyde_core::ExplorationConfiguration,
-    ) -> Arc<Mutex<dyn Iterator<Item = idesyde_core::ExplorationSolution> + Send + Sync>> {
+    ) -> Arc<Mutex<dyn Iterator<Item = idesyde_core::ExplorationEvent> + Send + Sync>> {
         let java_vm = self.java_vm.clone();
         let exploration_iter = java_vm.attach_current_thread_permanently().and_then(|mut top_env| {
             let java_m = m.into_java(&mut top_env)?;

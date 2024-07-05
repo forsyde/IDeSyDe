@@ -51,7 +51,7 @@ public interface Explorer {
         return new ExplorationBidding(false, false, 10.0, Set.of(), Map.of());
     }
 
-    default Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
+    default Stream<? extends ExplorationEvent> explore(DecisionModel decisionModel,
             Set<ExplorationSolution> previousSolutions,
             Configuration configuration) {
         return Stream.empty();

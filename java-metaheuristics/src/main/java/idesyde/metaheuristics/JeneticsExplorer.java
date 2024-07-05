@@ -1,21 +1,18 @@
 package idesyde.metaheuristics;
 
-import idesyde.common.AperiodicAsynchronousDataflow;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore;
 import idesyde.common.AperiodicAsynchronousDataflowToPartitionedTiledMulticore;
-import idesyde.common.SDFApplication;
 import idesyde.core.AutoRegister;
 import idesyde.core.DecisionModel;
 import idesyde.core.ExplorationSolution;
 import idesyde.core.Explorer;
 import idesyde.core.ExplorationBidding;
+import idesyde.core.ExplorationEvent;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Stream;
 
 @AutoRegister(MetaHeuristicsExplorationModule.class)
@@ -61,23 +58,24 @@ public class JeneticsExplorer implements Explorer, CanExploreAADPMMMWithJenetics
     }
 
     @Override
-    public Stream<? extends ExplorationSolution> explore(DecisionModel decisionModel,
+    public Stream<? extends ExplorationEvent> explore(DecisionModel decisionModel,
             Set<ExplorationSolution> previousSolutions, Configuration configuration) {
-        var totalSolutions = new CopyOnWriteArraySet<ExplorationSolution>();
         switch (decisionModel.category()) {
             case "AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore":
                 return DecisionModel
                         .cast(decisionModel, AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore.class)
                         .map(m -> exploreAADPMMM(m, previousSolutions, configuration)).orElse(Stream.empty())
                         .dropWhile(sol -> previousSolutions.contains(sol) ||
-                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)));
+                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)))
+                        .map(m -> new ExplorationEvent(Optional.of(m), false));
                         // .peek(s -> totalSolutions.add(s));
             case "AperiodicAsynchronousDataflowToPartitionedTiledMulticore":
                 return DecisionModel
                         .cast(decisionModel, AperiodicAsynchronousDataflowToPartitionedTiledMulticore.class)
                         .map(m -> exploreAADPTM(m, previousSolutions, configuration)).orElse(Stream.empty())
                         .dropWhile(sol -> previousSolutions.contains(sol) ||
-                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)));
+                                previousSolutions.stream().anyMatch(prev -> prev.dominates(sol)))
+                        .map(m -> new ExplorationEvent(Optional.of(m), false));
                         // .peek(s -> totalSolutions.add(s));
             default:
                 return Stream.empty();

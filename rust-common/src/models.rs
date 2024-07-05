@@ -941,8 +941,9 @@ impl AperiodicAsynchronousDataflowToPartitionedTiledMulticore {
         }
         let mut inv_throughput: HashMap<&str, f64> = self.aperiodic_asynchronous_dataflows.iter().flat_map(|app| 
             app.processes.iter().map(|a| (a.as_str(), 
-                *actor_times.get(a.as_str()).unwrap_or(&0.0)
-                + app.buffers.iter().filter(|b| app.process_put_in_buffer_in_bits.get(a).map(|x| x.contains_key(*b)).unwrap_or(false)).map(|b| *buffer_times.get(b.as_str()).unwrap_or(&0.0)).sum::<f64>()
+                actor_times.get(a.as_str()).unwrap_or(&0.0).max(
+                 app.buffers.iter().filter(|b| app.process_put_in_buffer_in_bits.get(a).map(|x| x.contains_key(*b)).unwrap_or(false)).map(|b| *buffer_times.get(b.as_str()).unwrap_or(&0.0)).sum::<f64>()
+                )
             ))
         ).collect();
         let sccs = tarjan_scc(&full_graph);

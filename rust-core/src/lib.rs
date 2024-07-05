@@ -5,10 +5,8 @@ use std::{
     hash::Hash,
     path::Path,
     sync::{
-        mpsc::{Receiver, Sender},
         Arc, Mutex,
-    },
-    time::{Duration, Instant},
+    }
 };
 
 use derive_builder::Builder;
@@ -505,6 +503,18 @@ impl ExplorationConfiguration {
     }
 }
 
+/// An ExplorationEvent captures events other than the actual solutions produced by an explorer.
+/// This includes notifying the caller if the explorer has proved optimality, for example.
+/// 
+/// The convention is that if `optimality_proved` is true, then the `solution` field can either be the last optimal solution or `None`.
+/// If `None`, it means that the last found solution constitutes the optimal solution.
+#[derive(Clone, Default, PartialEq)]
+pub struct ExplorationEvent {
+    pub solution: Option<ExplorationSolution>,
+    pub optimality_proved: bool,
+}
+
+/// An exploration solution is the pair of a decision model and the objectives attained by the explorer attached to this decision model.
 #[derive(Clone)]
 pub struct ExplorationSolution {
     pub solved: Arc<dyn DecisionModel>,
@@ -717,7 +727,7 @@ pub trait Explorer: Downcast + Send + Sync {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationEvent> + Send + Sync>> {
         Arc::new(Mutex::new(std::iter::empty()))
     }
 }
@@ -756,7 +766,7 @@ impl<T: Explorer + ?Sized> Explorer for Arc<T> {
         _m: Arc<dyn DecisionModel>,
         _currrent_solutions: &HashSet<ExplorationSolution>,
         _exploration_configuration: ExplorationConfiguration,
-    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationSolution> + Send + Sync>> {
+    ) -> Arc<Mutex<dyn Iterator<Item = ExplorationEvent> + Send + Sync>> {
         self.as_ref()
             .explore(_m, _currrent_solutions, _exploration_configuration)
     }
@@ -1148,342 +1158,6 @@ impl Module for RustEmbeddedModule {
     }
 }
 
-/// This iterator is able to get a handful of explorers + decision models combination
-/// and make the exploration cooperative. It does so by exchanging the solutions
-/// found between explorers so that the explorers almost always with the latest approximate Pareto set
-/// update between themselves.
-pub struct CombinedExplorerIterator {
-    sol_channels: Vec<Receiver<ExplorationSolution>>,
-    is_exact: Vec<bool>,
-    finish_request_channels: Vec<Sender<bool>>,
-    duration_left: Option<Duration>,
-    _handles: Vec<std::thread::JoinHandle<()>>,
-}
-
-impl CombinedExplorerIterator {
-    pub fn start(
-        explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-        currrent_solutions: &HashSet<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> CombinedExplorerIterator {
-        let all_heuristic = explorers_and_models.iter().map(|_| false).collect();
-        CombinedExplorerIterator::start_with_exact(
-            explorers_and_models,
-            &all_heuristic,
-            currrent_solutions,
-            exploration_configuration,
-        )
-    }
-
-    pub fn start_with_exact(
-        explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-        is_exact: &Vec<bool>,
-        currrent_solutions: &HashSet<ExplorationSolution>,
-        exploration_configuration: ExplorationConfiguration,
-    ) -> CombinedExplorerIterator {
-        let mut sol_channels: Vec<Receiver<ExplorationSolution>> = Vec::new();
-        let mut completed_channels: Vec<Sender<bool>> = Vec::new();
-        let mut handles: Vec<std::thread::JoinHandle<()>> = Vec::new();
-        for (e, m) in explorers_and_models {
-            let (sc, cc, h) = explore_non_blocking(
-                e,
-                m,
-                currrent_solutions,
-                exploration_configuration.to_owned(),
-            );
-            sol_channels.push(sc);
-            completed_channels.push(cc);
-            handles.push(h);
-        }
-        CombinedExplorerIterator {
-            sol_channels,
-            is_exact: is_exact.to_owned(),
-            finish_request_channels: completed_channels,
-            duration_left: if exploration_configuration.improvement_timeout > 0u64 {
-                Some(Duration::from_secs(
-                    exploration_configuration.improvement_timeout,
-                ))
-            } else {
-                None
-            },
-            _handles: handles,
-        }
-    }
-}
-
-impl Drop for CombinedExplorerIterator {
-    fn drop(&mut self) {
-        // debug!("Killing iterator");
-        for c in &self.finish_request_channels {
-            match c.send(true) {
-                Ok(_) => {}
-                Err(_) => {}
-            };
-        }
-    }
-}
-
-impl Iterator for CombinedExplorerIterator {
-    type Item = ExplorationSolution;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut num_disconnected = 0;
-        let start = Instant::now();
-        while num_disconnected < self.sol_channels.len()
-            && self
-                .duration_left
-                .map(|d| d >= start.elapsed())
-                .unwrap_or(true)
-        {
-            num_disconnected = 0;
-            for i in 0..self.sol_channels.len() {
-                match self.sol_channels[i].recv_timeout(std::time::Duration::from_millis(500)) {
-                    Ok(solution) => {
-                        // debug!("New solution from explorer index {}", i);
-                        self.duration_left = self.duration_left.map(|d| {
-                            if d >= start.elapsed() {
-                                d - start.elapsed()
-                            } else {
-                                Duration::ZERO
-                            }
-                        });
-                        return Some(solution);
-                    }
-                    Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                        num_disconnected += 1;
-                        // finish early if the explorer is exact and ends early
-                        if self.is_exact[i] {
-                            return None;
-                        }
-                    }
-                    Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {}
-                };
-            }
-        }
-        None
-    }
-}
-
-pub struct MultiLevelCombinedExplorerIterator {
-    explorers_and_models: Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-    exploration_configuration: ExplorationConfiguration,
-    // levels: Vec<CombinedExplorerIterator>,
-    // levels_tuple: (Option<CombinedExplorerIterator>, CombinedExplorerIterator),
-    levels_stream: (
-        Option<Arc<Receiver<ExplorationSolution>>>,
-        Arc<Receiver<ExplorationSolution>>,
-    ),
-    solutions: HashSet<ExplorationSolution>,
-    // converged_to_last_level: bool,
-    start: Instant,
-}
-
-impl Iterator for MultiLevelCombinedExplorerIterator {
-    type Item = ExplorationSolution;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        loop {
-            if self.exploration_configuration.total_timeout > 0
-                && self.start.elapsed()
-                    > Duration::from_secs(self.exploration_configuration.total_timeout)
-            {
-                return None;
-            }
-            let (_, last_level) = &self.levels_stream;
-            match last_level.recv_timeout(Duration::from_millis(500)) {
-                Ok(solution) => {
-                    self.solutions.insert(solution.clone());
-                    let sol_dominates = self
-                        .solutions
-                        .iter()
-                        .any(|cur_sol| solution.partial_cmp(cur_sol) == Some(Ordering::Less));
-                    if sol_dominates {
-                        // debug!("Starting new level");
-                        self.solutions.retain(|cur_sol| {
-                            solution.partial_cmp(cur_sol) != Some(Ordering::Less)
-                        });
-                        let combined_explorer = CombinedExplorerIterator::start(
-                            &self.explorers_and_models,
-                            &self.solutions,
-                            self.exploration_configuration.to_owned(),
-                        );
-                        let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
-                        // move the data structures to contain new explorers
-                        self.levels_stream = (Some(last_level.to_owned()), Arc::new(receiver));
-                        // self.levels_tuple = (Some(self.levels_tuple.1), combined_explorer);
-                        std::thread::spawn(move || {
-                            for sol in combined_explorer {
-                                match sender.send(sol) {
-                                    Ok(_) => {}
-                                    Err(_) => {
-                                        break;
-                                    }
-                                };
-                            }
-                        });
-                    }
-                    // return if the solution is not dominated
-                    if self
-                        .solutions
-                        .iter()
-                        .all(|cur_sol| solution.partial_cmp(cur_sol) != Some(Ordering::Greater))
-                    {
-                        return Some(solution);
-                    }
-                }
-                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
-                    if let (Some(prev_level), _) = &self.levels_stream {
-                        self.levels_stream = (None, prev_level.to_owned());
-                        // self.levels_tuple = (
-                        //     None,
-                        //     self.levels_tuple
-                        //         .0
-                        //         .expect("Combined explorer should always exist."),
-                        // );
-                    } else {
-                        return None;
-                    }
-                }
-                _ => (),
-            };
-        }
-        // None
-        //     match self.levels_tuple {
-        //         (_, Some(last_level)) => {
-
-        //         }
-        //     }
-        // }
-        // match self.levels.last_mut() {
-        //     Some(last_level) => {
-        //         match last_level
-        //             .filter(|new_solution| {
-        //                 // solution is not dominated
-        //                 !self.solutions.iter().any(|cur_solution| {
-        //                     new_solution.partial_cmp(cur_solution) == Some(Ordering::Greater)
-        //                 })
-        //             })
-        //             .find(|x| !self.solutions.contains(x))
-        //         {
-        //             Some(new_solution) => {
-        //                 self.solutions.insert(new_solution.clone());
-        //                 if !self.converged_to_last_level {
-        //                     let sol_dominates = self.solutions.iter().any(|cur_sol| {
-        //                         new_solution.partial_cmp(cur_sol) == Some(Ordering::Less)
-        //                     });
-        //                     if sol_dominates {
-        //                         // debug!("Starting new level");
-        //                         self.solutions.retain(|cur_sol| {
-        //                             new_solution.partial_cmp(cur_sol) != Some(Ordering::Less)
-        //                         });
-        //                         self.levels.push(CombinedExplorerIterator::start(
-        //                             &self.explorers_and_models,
-        //                             &self.solutions,
-        //                             self.exploration_configuration.to_owned(),
-        //                         ));
-        //                     }
-        //                     if self.levels.len() > 2 {
-        //                         self.levels.remove(0);
-        //                     }
-        //                 }
-        //                 // debug!("solutions {}", self.solutions.len());
-        //                 return Some(new_solution);
-        //                 // self.previous = Some(self.current_level);
-        //                 // self.current_level
-        //             }
-        //             None => {
-        //                 if !self.converged_to_last_level {
-        //                     self.converged_to_last_level = true;
-        //                     self.levels.remove(self.levels.len() - 1);
-        //                     return self.next();
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     None => {}
-        // };
-        // None
-    }
-}
-
-// pub fn explore_cooperatively_simple(
-//     explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-//     currrent_solutions: &HashSet<ExplorationSolution>,
-//     exploration_configuration: ExplorationConfiguration,
-//     // solution_inspector: F,
-// ) -> MultiLevelCombinedExplorerIterator {
-//     let combined_explorer = CombinedExplorerIterator::start(
-//         &explorers_and_models,
-//         &currrent_solutions,
-//         exploration_configuration.to_owned(),
-//     );
-//     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
-//     // move the data structures to contain new explorers
-//     let levels_stream = (None, Arc::new(receiver));
-//     // let levels_tuple = (None, combined_explorer);
-//     std::thread::spawn(move || {
-//         for sol in combined_explorer {
-//             match sender.send(sol) {
-//                 Ok(_) => {}
-//                 Err(_) => {}
-//             };
-//         }
-//     });
-//     MultiLevelCombinedExplorerIterator {
-//         explorers_and_models: explorers_and_models.clone(),
-//         solutions: currrent_solutions.clone(),
-//         exploration_configuration: exploration_configuration.to_owned(),
-//         // levels: vec![CombinedExplorerIterator::start_with_exact(
-//         //     explorers_and_models,
-//         //     &biddings.iter().map(|b| b.is_exact).collect(),
-//         //     currrent_solutions,
-//         //     exploration_configuration.to_owned(),
-//         // )],
-//         levels_stream,
-//         // converged_to_last_level: false,
-//         start: Instant::now(),
-//     }
-// }
-
-// pub fn explore_cooperatively(
-//     explorers_and_models: &Vec<(Arc<dyn Explorer>, Arc<dyn DecisionModel>)>,
-//     _biddings: &Vec<ExplorationBid>,
-//     currrent_solutions: &HashSet<ExplorationSolution>,
-//     exploration_configuration: ExplorationConfiguration,
-//     // solution_inspector: F,
-// ) -> MultiLevelCombinedExplorerIterator {
-//     let combined_explorer = CombinedExplorerIterator::start(
-//         &explorers_and_models,
-//         &currrent_solutions,
-//         exploration_configuration.to_owned(),
-//     );
-//     let (sender, receiver) = std::sync::mpsc::channel::<ExplorationSolution>();
-//     // move the data structures to contain new explorers
-//     let levels_stream = (None, Arc::new(receiver));
-//     // let levels_tuple = (None, combined_explorer);
-//     std::thread::spawn(move || {
-//         for sol in combined_explorer {
-//             match sender.send(sol) {
-//                 Ok(_) => {}
-//                 Err(_) => {}
-//             };
-//         }
-//     });
-//     MultiLevelCombinedExplorerIterator {
-//         explorers_and_models: explorers_and_models.clone(),
-//         solutions: currrent_solutions.clone(),
-//         exploration_configuration: exploration_configuration.to_owned(),
-//         // levels: vec![CombinedExplorerIterator::start_with_exact(
-//         //     explorers_and_models,
-//         //     &biddings.iter().map(|b| b.is_exact).collect(),
-//         //     currrent_solutions,
-//         //     exploration_configuration.to_owned(),
-//         // )],
-//         levels_stream,
-//         // converged_to_last_level: false,
-//         start: Instant::now(),
-//     }
-// }
 
 pub fn compute_dominant_bidding<'a, I>(biddings: I) -> Option<(usize, ExplorationBid)>
 where
@@ -1569,51 +1243,6 @@ pub fn load_decision_model<T: DecisionModel + DeserializeOwned>(
     None
 }
 
-/// Perform exploration in a non blocking manner
-///
-/// This function effectively spawns a new thread and only kills it when the completed
-/// signal is given. Note, however, that the thread can run for some time after the signal
-/// is given will check for completion only after a solution has been found or
-/// infeasibility has been proven.
-pub fn explore_non_blocking<T, M>(
-    explorer: &T,
-    m: &M,
-    currrent_solutions: &HashSet<ExplorationSolution>,
-    exploration_configuration: ExplorationConfiguration,
-) -> (
-    Receiver<ExplorationSolution>,
-    Sender<bool>,
-    std::thread::JoinHandle<()>,
-)
-where
-    T: Explorer + Clone + ?Sized,
-    M: Into<Arc<dyn DecisionModel>> + Clone,
-{
-    let (solution_tx, solution_rx) = std::sync::mpsc::channel();
-    let (completed_tx, completed_rx) = std::sync::mpsc::channel();
-    let this_explorer = explorer.clone();
-    let this_decision_model = m.to_owned().into();
-    let prev_sols = currrent_solutions.to_owned();
-    let handle = std::thread::spawn(move || {
-        if let Ok(true) = completed_rx.recv_timeout(std::time::Duration::from_millis(300)) {
-            return ();
-        }
-        if let Ok(mut iter) = this_explorer
-            .explore(
-                this_decision_model,
-                &prev_sols,
-                exploration_configuration.to_owned(),
-            )
-            .lock()
-        {
-            match iter.next().and_then(|x| solution_tx.send(x).ok()) {
-                Some(_) => {}
-                None => return (),
-            };
-        }
-    });
-    (solution_rx, completed_tx, handle)
-}
 
 pub fn pareto_dominance_partial_cmp(
     lhs: &HashMap<String, f64>,

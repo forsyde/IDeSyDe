@@ -1392,3 +1392,53 @@ impl DecisionModel for PeriodicWorkloadToPartitionedSharedMultiCore {
         elems
     }
 }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable {
+    pub periodic_workload: CommunicatingAndTriggeredReactiveWorkload,
+    pub aperiodic_asynchronous_dataflows: Vec<AperiodicAsynchronousDataflow>,
+    pub platform: PartitionedMemoryMappableMulticore,
+    pub instrumented_computation_times: InstrumentedComputationTimes,
+    pub instrumented_memory_requirements: InstrumentedMemoryRequirements,
+    pub process_mapping: Vec<(String, String)>,
+    pub process_schedulings: Vec<(String, String)>,
+    pub channel_mappings: Vec<(String, String)>,
+    pub communication_slot_allocations: HashMap<String, HashMap<String, u16>>,
+    pub super_loop_schedules: HashMap<String, Vec<String>>,
+}
+
+impl_decision_model_conversion!(PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable);
+impl DecisionModel for PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable {
+    impl_decision_model_standard_parts!(PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable);
+
+    fn part(&self) -> HashSet<String> {
+        let mut elems: HashSet<String> = HashSet::new();
+        elems.extend(self.periodic_workload.part().iter().map(|x| x.to_owned()));
+        for app in &self.aperiodic_asynchronous_dataflows {
+            elems.extend(app.part().iter().map(|x| x.to_owned()));
+        }
+        elems.extend(self.platform.part().iter().map(|x| x.to_owned()));
+        elems.extend(
+            self.instrumented_computation_times
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        elems.extend(
+            self.instrumented_memory_requirements
+                .part()
+                .iter()
+                .map(|x| x.to_owned()),
+        );
+        for (pe, sched) in &self.process_schedulings {
+            elems.insert(format!("{}={}:{}-{}:{}", "scheduling", pe, "", sched, ""));
+        }
+        for (pe, mem) in &self.process_mapping {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", pe, "", mem, ""));
+        }
+        for (buf, mem) in &self.channel_mappings {
+            elems.insert(format!("{}={}:{}-{}:{}", "mapping", buf, "", mem, ""));
+        }
+        elems
+    }
+}

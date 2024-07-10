@@ -846,7 +846,9 @@ impl ReverseIdentificationRuleLike for JavaModuleReverseIdentificationRule {
                         JValue::Object(jdecisions.as_ref()),
                         JValue::Object(jdesigns.as_ref()),
                     ],
-                )?.l()?;
+                )
+                .inspect_err(|_| {let _ = env.exception_describe();})
+                ?.l()?;
                     HashSet::from_java(env, set_obj)
                 });
             match jresult {

@@ -63,7 +63,7 @@ constraint forall(b in Buffers) (durationBufferMessage[b] <= max([0] ++ [
   sum(ce in path) (frameSize[ce]) + processesWriteBuffer[src, b] * min(ce in path) (invBandwidthPerChannel[ce])
   | src in Processes, mSrc, mDst in Tiles where mSrc != mDst /\ hasInterconnectTo[mSrc, mDst] /\ processesWriteBuffer[src, b] > 0
 ]));
-int: maxTh = sum(p in Processes) (max([e | e in executionTime[p, ..] where e >= 0]) + sum(b in Buffers, mSrc, mDst in Tiles where mSrc != mDst /\ hasInterconnectTo[mSrc, mDst] /\ processesWriteBuffer[p, b] > 0) (
+int: maxTh = sum(p in Processes) (sum(f in Firings where firingsActor[f] = p) (1) * max([e | e in executionTime[p, ..] where e >= 0]) + sum(b in Buffers, mSrc, mDst in Tiles where mSrc != mDst /\ hasInterconnectTo[mSrc, mDst] /\ processesWriteBuffer[p, b] > 0) (
   let { set of int: path = interconnectTo[mSrc, mDst]; } in
   sum(ce in path) (frameSize[ce]) + processesWriteBuffer[p, b] * min(ce in path) (invBandwidthPerChannel[ce])
 ));

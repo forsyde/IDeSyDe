@@ -13,10 +13,12 @@ use crate::models::{
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore,
     AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticoreAndPL,
     AperiodicAsynchronousDataflowToPartitionedTiledMulticore, HardwareImplementationArea,
-    InstrumentedComputationTimes, InstrumentedMemoryRequirements, MemoryMappableMulticoreWithPL,
-    MemoryMappableMultiCore, PartitionedMemoryMappableMulticore,
-    PartitionedMemoryMappableMulticoreAndPL, PartitionedTiledMulticore, RuntimesAndProcessors,
-    SDFApplication, TiledMultiCore,
+    InstrumentedComputationTimes, InstrumentedMemoryRequirements, MemoryMappableMultiCore,
+    MemoryMappableMulticoreWithPL, PartitionedMemoryMappableMulticore,
+    PartitionedMemoryMappableMulticoreAndPL, PartitionedTiledMulticore,
+    PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable,
+    PeriodicWorkloadToPartitionedSharedMultiCore, RuntimesAndProcessors, SDFApplication,
+    TiledMultiCore,
 };
 
 pub fn identify_partitioned_mem_mapped_multicore(
@@ -100,7 +102,8 @@ pub fn identify_partitioned_mem_mapped_multicore_and_pl(
             }
             if one_proc_per_scheduler && one_scheduler_per_proc {
                 for m1 in decision_models {
-                    if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMulticoreWithPL) {
+                    if let Some(plat) = cast_dyn_decision_model!(m1, MemoryMappableMulticoreWithPL)
+                    {
                         let potential = Arc::new(PartitionedMemoryMappableMulticoreAndPL {
                             hardware: plat.to_owned(),
                             runtimes: runt.to_owned(),
@@ -800,6 +803,86 @@ pub fn identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_mult
         }
     } else {
         errors.push("identify_aperiodic_asynchronous_dataflow_to_partitioned_mem_mappable_multicore_and_pl: no mem mappable (pl) platform model".to_string());
+    }
+    (identified, errors)
+}
+
+pub fn identify_combined_periodic_workload_and_aad_mem_mappable(
+    _design_models: &[Arc<dyn DesignModel>],
+    decision_models: &[Arc<dyn DecisionModel>],
+) -> IdentificationResult {
+    let mut identified: Vec<Arc<dyn DecisionModel>> = Vec::new();
+    let mut errors: Vec<String> = Vec::new();
+    for workload_dse in decision_models
+        .iter()
+        .flat_map(|m| cast_dyn_decision_model!(m, PeriodicWorkloadToPartitionedSharedMultiCore))
+    {
+        for aad_dse in decision_models.iter().flat_map(|m| {
+            cast_dyn_decision_model!(
+                m,
+                AperiodicAsynchronousDataflowToPartitionedMemoryMappableMulticore
+            )
+        }) {
+            let workload_dse = workload_dse.clone();
+            if workload_dse.platform == aad_dse.partitioned_mem_mappable_multicore
+                && workload_dse.instrumented_computation_times
+                    == aad_dse.instrumented_computation_times
+                && workload_dse.instrumented_memory_requirements
+                    == aad_dse.instrumented_memory_requirements
+            {
+                let proc_mappings: Vec<(String, String)> = workload_dse
+                    .process_mapping
+                    .into_iter()
+                    .chain(aad_dse.processes_to_memory_mapping.into_iter())
+                    .collect();
+                let channel_mappings: Vec<(String, String)> = workload_dse
+                    .channel_mappings
+                    .into_iter()
+                    .chain(aad_dse.buffer_to_memory_mappings.into_iter())
+                    .collect();
+                let proc_schedulings: Vec<(String, String)> = workload_dse
+                    .process_schedulings
+                    .into_iter()
+                    .chain(aad_dse.processes_to_runtime_scheduling.into_iter())
+                    .collect();
+                let comm_reservations: HashMap<String, HashMap<String, u16>> = aad_dse
+                    .processing_elements_to_routers_reservations
+                    .into_iter()
+                    .chain(
+                        workload_dse
+                            .channel_slot_allocations
+                            .into_iter()
+                            .map(|(k, v)| {
+                                (
+                                    k,
+                                    v.into_iter()
+                                        .map(|(k, v)| {
+                                            (k, v.into_iter().filter(|x| *x == true).count() as u16)
+                                        })
+                                        .collect(),
+                                )
+                            }),
+                    )
+                    .collect();
+                identified.push(Arc::new(
+                    PeriodicWorkloadAndAperiodicAsynchronousDataflowToPartitionedMemoryMappable {
+                        periodic_workload: workload_dse.workload,
+                        aperiodic_asynchronous_dataflows: aad_dse.aperiodic_asynchronous_dataflows,
+                        instrumented_computation_times: workload_dse.instrumented_computation_times,
+                        instrumented_memory_requirements: workload_dse
+                            .instrumented_memory_requirements,
+                        platform: workload_dse.platform,
+                        process_mapping: proc_mappings,
+                        process_schedulings: proc_schedulings,
+                        channel_mappings: channel_mappings,
+                        communication_slot_allocations: comm_reservations,
+                        super_loop_schedules: aad_dse.super_loop_schedules,
+                    },
+                ) as Arc<dyn DecisionModel>);
+            } else {
+                errors.push("identify_combined_periodic_workload_and_aad_mem_mappable: partitioned multicore platforms or instrumentation data do not match".to_string());
+            }
+        }
     }
     (identified, errors)
 }

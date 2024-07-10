@@ -2,7 +2,7 @@ plugins {
     id 'idesyde.java-standalone-module'
 }
 
-def forsydeioVersion = "develop-SNAPSHOT"
+def forsydeioVersion = "master-SNAPSHOT"
 
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'

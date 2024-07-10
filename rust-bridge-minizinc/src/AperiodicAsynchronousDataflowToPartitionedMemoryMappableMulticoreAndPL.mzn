@@ -55,6 +55,12 @@ constraint forall(p in Processes) (durationRead[p] >= 0);
 constraint forall(p in Processes) (durationWrite[p] >= 0);
 constraint forall(p in Processes) (duration[p] >= min([e | e in executionTime[p, ..] where e >= 0]));
 
+int: maxTh = sum(p in Processes) (2 * sum(f in Firings where firingsActor[f] = p) (1) * max([e | e in executionTime[p, ..] where e >= 0]));
+constraint forall(p in Processes) (invThroughput[p] <= maxTh);
+constraint forall(p in Processes) (invThroughput[p] >= min([e | e in executionTime[p, ..] where e >= 0]));
+constraint forall(f in Firings, l in Mappable) (maxPath[f, l] >= -maxTh);
+constraint forall(f in Firings, l in Mappable) (maxPath[f, l] <= maxTh);
+
 constraint forall(p in Processes, pe in ListSchedulers, me in Memories where absent(interconnectFromMemories[me, pe])) (
   processesExecution[p] != pe \/ processesMapping[p] != me
 );
@@ -126,29 +132,29 @@ constraint forall(p in Processes)(duration[p] = durationFetch[p] + executionTime
 
 constraint forall(f, ff in Firings where f != ff /\ ff in follows[f]) (processesExecution[firingsActor[f]] = processesExecution[firingsActor[ff]] -> firingsOrdering[f] < firingsOrdering[ff]);
 
-constraint diffn([processMapping[firingsActor[f]]| f in Firings], [firingsOrdering[f] | f in Firings], [1 | f in Firings], [1 | f in Firings]);
+constraint diffn([processesMapping[firingsActor[f]]| f in Firings], [firingsOrdering[f] | f in Firings], [1 | f in Firings], [1 | f in Firings]);
 
 constraint forall(pe in ListSchedulers, f in Firings) (processesExecution[firingsActor[f]] = pe -> count_lt([processesExecution[firingsActor[ff]] | ff in Firings], pe, firingsOrdering[f]));
 
 constraint nvalue(nUsedPEs, processesExecution);
 
-constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] = 0 /\ processMapping[firingsActor[f]] = pe) (
+constraint forall(f in Firings, pe in Mappable where firingsOrdering[f] = 0 /\ processesMapping[firingsActor[f]] = pe) (
     maxPath[f, pe] = duration[firingsActor[f]]
 );
-constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] = 0 /\ processMapping[firingsActor[f]] != pe) (
+constraint forall(f in Firings, pe in Mappable where firingsOrdering[f] = 0 /\ processesMapping[firingsActor[f]] != pe) (
     maxPath[f, pe] = duration[firingsActor[f]] + max([-maxTh] ++ [maxPath[ff, pe] | ff in Firings where f in follows[ff]])
 );
-constraint forall(f in Firings, pe in Tiles where firingsOrdering[f] > 0) (
+constraint forall(f in Firings, pe in Mappable where firingsOrdering[f] > 0) (
     maxPath[f, pe] = duration[firingsActor[f]] + max(
-        [maxPath[ff, pe] | ff in Firings where f != ff /\ processMapping[firingsActor[f]]  = processMapping[firingsActor[ff]] /\ firingsOrdering[f] > firingsOrdering[ff]] ++ 
-        [maxPath[ff, pe] | ff in Firings where f != ff /\ processMapping[firingsActor[f]] != processMapping[firingsActor[ff]] /\ f in follows[ff]]
+        [maxPath[ff, pe] | ff in Firings where f != ff /\ processesMapping[firingsActor[f]]  = processesMapping[firingsActor[ff]] /\ firingsOrdering[f] > firingsOrdering[ff]] ++ 
+        [maxPath[ff, pe] | ff in Firings where f != ff /\ processesMapping[firingsActor[f]] != processesMapping[firingsActor[ff]] /\ f in follows[ff]]
     )
 );
 
 constraint forall(a in Processes) (
   let {
-    var int: maxCycleConnected = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where connected[firingsActor[f], a]]);
-    var int: maxCycleComapped = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where processMapping[firingsActor[f]] = processMapping[a]])
+    var int: maxCycleConnected = max([maxPath[f, processesMapping[firingsActor[f]]] | f in Firings where connected[firingsActor[f], a]]);
+    var int: maxCycleComapped = max([maxPath[f, processesMapping[firingsActor[f]]] | f in Firings where processesMapping[firingsActor[f]] = processesMapping[a]])
   } in
   invThroughput[a] = max([duration[a], maxCycleConnected, maxCycleComapped])
 );

@@ -106,7 +106,7 @@ lazy val common = (project in file("scala-common"))
     // name := "idesyde-scala-common",
     libraryDependencies ++= Seq(
       "com.lihaoyi"               %% "upickle"         % upickleVersion,
-      "com.github.forsyde.IDeSyDe" % "build-java-core" % globalIDeSyDeJavaVersion,
+      "com.github.forsyde.IDeSyDe" % "java-core" % globalIDeSyDeJavaVersion,
       // "com.github.forsyde.IDeSyDe" % "build-java-blueprints" % globalIDeSyDeJavaVersion,
       "org.jgrapht" % "jgrapht-core" % jgraphtVersion,
       // ("org.scala-graph" %% "graph-core" % scalaGraphVersion).cross(CrossVersion.for3Use2_13),

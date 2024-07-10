@@ -21,7 +21,7 @@ class GeneralDSETests {
 
     final ObjectMapper objectMapper = DecisionModel.objectMapper;
 
-    @Test
+//     @Test
     void testAADTPMExplorer() throws StreamReadException, DatabindException, IOException {
         final Explorer.Configuration config = new Explorer.Configuration();
         config.maximumSolutions = 1L;

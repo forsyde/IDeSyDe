@@ -239,7 +239,7 @@ class ChocoExplorer extends Explorer:
       decisionModel: DecisionModel,
       previousSolutions: java.util.Set[ExplorationSolution],
       configuration: Explorer.Configuration
-  ): Stream[ExplorationSolution] = {
+  ): Stream[ExplorationEvent] = {
     var llist = decisionModel.category() match
       case "SDFToTiledMultiCore" =>
         tryCast(decisionModel, classOf[SDFToTiledMultiCore]) { sdf =>
@@ -290,15 +290,15 @@ class ChocoExplorer extends Explorer:
     Stream
       .generate(() => {
         if (iter.hasNext) {
-          Some(iter.next())
+          ExplorationEvent(Some(iter.next()), false)
         } else {
-          None
+          ExplorationEvent(None, true)
         }
       })
-      .takeWhile(_.isDefined)
+      .takeWhile(!_.optimalityProved)
       //   .filter(_.map(sol => !foundObjectives.contains(sol.objectives())).getOrElse(false))
       //   .peek(_.map(sol => foundObjectives.add(sol.objectives())))
-      .map(_.get)
+      // .map(_.get)
   }
 
   override def uniqueIdentifier(): String = "ChocoExplorer"

@@ -289,7 +289,7 @@ trait WorkloadRules {
                           .mapToLong(r =>
                             ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                               .tryView(r)
-                              .map(_.maxSizeInBits().values().asScala.max.toLong)
+                              .map(_.maxSizeInBits().values().asScala.maxOption.map(_.toLong).getOrElse(0L))
                               .orElse(0L)
                           )
                           .sum() + lt
@@ -298,7 +298,7 @@ trait WorkloadRules {
                           .mapToLong(r =>
                             ForSyDeHierarchy.InstrumentedSoftwareBehaviour
                               .tryView(r)
-                              .map(_.maxSizeInBits().values().asScala.max.toLong)
+                              .map(_.maxSizeInBits().values().asScala.maxOption.map(_.toLong).getOrElse(0L))
                               .orElse(0L)
                           )
                           .sum()

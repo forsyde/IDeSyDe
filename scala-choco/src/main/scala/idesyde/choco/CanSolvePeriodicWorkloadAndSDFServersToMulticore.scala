@@ -474,15 +474,15 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       )*
     )
 
-    chocoModel
-      .getSolver()
-      .plugMonitor(new IMonitorContradiction {
-        def onContradiction(cex: ContradictionException): Unit = {
-          println(cex.toString())
-          // println(chocoModel.getVars().filter(_.getName().contains("utilization")).mkString(", "))
-          println(chocoModel.getSolver().getDecisionPath().toString())
-        }
-      })
+    // chocoModel
+    //   .getSolver()
+    //   .plugMonitor(new IMonitorContradiction {
+    //     def onContradiction(cex: ContradictionException): Unit = {
+    //       println(cex.toString())
+    //       // println(chocoModel.getVars().filter(_.getName().contains("utilization")).mkString(", "))
+    //       println(chocoModel.getSolver().getDecisionPath().toString())
+    //     }
+    //   })
     (chocoModel, objs.map(o => o.getName() -> o).toMap)
   }
 
@@ -491,7 +491,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       solution: Solution,
       configuration: Explorer.Configuration
   ): ExplorationSolution = {
-    println("Rebulding")
     val timeValues =
       m.wcets.flatten ++ m.platform.hardware.maxTraversalTimePerBit.flatten
         .map(
@@ -518,7 +517,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
     //     if (configuration.memoryDiscretizationFactor > Int.MaxValue) Int.MaxValue else configuration.memoryDiscretizationFactor.toInt
     //   )
     val intVars = solution.retrieveIntVars(true).asScala
-    println(intVars.filter(v => v.getName().contains("effect") || v.getName().contains("utilization")).mkString(", "))
     val tasksMemoryMapping: Vector[Int] =
       m.tasksAndSDFs.workload.processes.zipWithIndex.map((_, i) =>
         intVars
@@ -584,7 +582,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
         )
       )
     val numMappedElements = intVars.find(_.getName() == "nUsedPEs").get
-    println("Here")
     val invThs            = intVars.filter(_.getName().startsWith("invTh"))
     val dataChannelsSlotAllocations = m.tasksAndSDFs.workload.data_channels.zipWithIndex
       .map((c, ci) =>
@@ -647,7 +644,6 @@ final class CanSolvePeriodicWorkloadAndSDFServersToMulticore
       .map((s, i) =>
         intVars.find(_.getName().startsWith("utilization(" + i + ")")).get.getLB().toDouble / 100.0
       )
-    println("Before solution")
     ExplorationSolution(
       (Map(
         "nUsedPEs" -> numMappedElements.getValue().toDouble.asInstanceOf[java.lang.Double]

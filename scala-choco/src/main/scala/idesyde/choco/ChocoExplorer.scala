@@ -35,6 +35,7 @@ import java.util.concurrent.CopyOnWriteArraySet
 import idesyde.common.legacy.CommonModule.tryCast
 import org.chocosolver.solver.search.loop.monitors.SearchMonitorList
 import idesyde.core.OpaqueDecisionModel
+import idesyde.core.ExplorationEvent
 
 class ChocoExplorer extends Explorer:
 
@@ -290,9 +291,9 @@ class ChocoExplorer extends Explorer:
     Stream
       .generate(() => {
         if (iter.hasNext) {
-          ExplorationEvent(Some(iter.next()), false)
+          ExplorationEvent(Some(iter.next()).toJava, false)
         } else {
-          ExplorationEvent(None, true)
+          ExplorationEvent(java.util.Optional.empty(), true)
         }
       })
       .takeWhile(!_.optimalityProved)

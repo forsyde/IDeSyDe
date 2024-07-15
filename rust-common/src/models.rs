@@ -490,6 +490,10 @@ pub struct AperiodicAsynchronousDataflow {
     pub job_graph_src_instance: Vec<u64>,
     pub job_graph_dst_instance: Vec<u64>,
     pub job_graph_is_strong_precedence: Vec<bool>,
+    pub job_graph_cycles_src_name: Vec<String>,
+    pub job_graph_cycles_dst_name: Vec<String>,
+    pub job_graph_cycles_src_instance: Vec<u64>,
+    pub job_graph_cycles_dst_instance: Vec<u64>,
     pub process_minimum_throughput: HashMap<String, f64>,
     pub process_path_maximum_latency: HashMap<String, HashMap<String, f64>>,
 }

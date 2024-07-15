@@ -3,6 +3,7 @@ package idesyde.forsydeio;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -107,6 +108,10 @@ class ForSyDeIOSYNetworkToAADataflowIRule implements IdentificationRule {
                             jobGraphStrong,
                             jobGraphSrc,
                             jobGraphSrc.stream().map(x -> 1L).collect(Collectors.toList()),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            List.of(),
                             mapsAndDelays.stream()
                                     .collect(Collectors.toMap(
                                             proc -> proc.getIdentifier(),

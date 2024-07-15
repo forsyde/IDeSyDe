@@ -1265,6 +1265,8 @@ fn solve_aad2ptm<'a>(
         .iter()
         .map(|_| vec![false; all_processes.len()])
         .collect();
+    let mut firings_cycles: Vec<HashSet<u64>> =
+        all_firings.iter().map(|_| HashSet::new()).collect();
     let mut firings_follows: Vec<HashSet<u64>> =
         all_firings.iter().map(|_| HashSet::new()).collect();
     let memories = m.partitioned_tiled_multicore.hardware.memories.clone();
@@ -1292,6 +1294,11 @@ fn solve_aad2ptm<'a>(
                         .map(|tgt| all_firings.iter().position(|ff| ff == tgt).unwrap() as u64),
                 );
             }
+        }
+        for (((srca, srcq), dsta), dstq) in app.job_graph_cycles_src_name.iter().zip(app.job_graph_cycles_src_instance.iter()).zip(app.job_graph_cycles_dst_name.iter()).zip(app.job_graph_cycles_dst_instance.iter()) {
+            let firing_src_idx = all_firings.iter().position(|(f, i)| f == srca && i == srcq).unwrap();
+            let firings_dst_idx = all_firings.iter().position(|(f, i)| f == dsta && i == dstq).unwrap();
+            firings_cycles[firing_src_idx].insert(firings_dst_idx as u64);
         }
     }
     let execution_times: Vec<Vec<i32>> = all_processes
@@ -1420,6 +1427,7 @@ fn solve_aad2ptm<'a>(
         MiniZincData::from(all_firings_instances.clone()),
     );
     input_data.insert("follows", MiniZincData::from(firings_follows));
+    input_data.insert("cycles", MiniZincData::from(firings_cycles));
     input_data.insert("receiver", MiniZincData::from(messages_receiver));
     input_data.insert("sender", MiniZincData::from(messages_sender));
     input_data.insert(

@@ -10,6 +10,7 @@ set of int: Tiles;
 array[Firings] of int: firingsActor;
 array[Firings] of int: firingsNumber;
 array[Firings] of set of Firings: follows; % equivalent to f_i < f_j is precedes[i, j] = true
+array[Firings] of set of Firings: cycles;
 % array[Firings] of set of Messages: sends;
 array[Messages] of Firings: receiver;
 array[Messages] of Firings: sender;
@@ -148,9 +149,10 @@ constraint forall(a in Processes) (
   let {
     var int: selfCycle = max([duration[a], sum(b in Buffers where processesWriteBuffer[a, b] > 0) (durationBufferMessage[b])]);
     var int: maxCycleConnected = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where connected[firingsActor[f], a]]);
-    var int: maxCycleComapped = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where processMapping[firingsActor[f]] = processMapping[a]])
+    var int: maxCycleDelays = max([maxPath[ff, processMapping[f]] | f, ff in Firings where firingsActor[f] = a /\ f in cycles[ff]]);
+    var int: maxCycleComapped = max([maxPath[f, processMapping[firingsActor[f]]] | f in Firings where processMapping[firingsActor[f]] = processMapping[a]]);
   } in
-  invThroughput[a] = max([selfCycle, maxCycleConnected, maxCycleComapped])
+  invThroughput[a] = max([selfCycle, maxCycleConnected, maxCycleComapped, maxCycleDelays])
 );
 
 constraint forall(solNum in 1..nPareto) (

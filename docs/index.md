@@ -16,7 +16,7 @@ and also to situate you about the tool and its methods.
 * [IDeSyDe key concepts: design space identification and exploration](dsi_dse)
 * [IDeSyDe overview: software architecture and implementation aspects](overview)
 * [IDeSyDe formalities: mathematical proofs and other theoretical guarantees](formals)
-* IDeSyDe for the experts: extensions
+* [IDeSyDe for the experts: extensions](extensions)
 
 <!-- A quick glance at [Concepts](/concepts) can likely clarify this further! -->
 

@@ -1,5 +1,5 @@
-FROM ubuntu:22.04
-
+# syntax=docker/dockerfile:labs
+FROM debian:bookworm-slim
 # Set environment variables
 ARG GRADLE_HOME=/opt/gradle
 ARG GRADLE_VERSION=8.1-rc-1
@@ -11,7 +11,7 @@ RUN apt-get update && \
     apt-get install -y build-essential wget curl apt-transport-https gnupg unzip zip git openjdk-${OPENJDK_VERSION}-jdk && \
     apt-get clean
 # For Java
-ENV PATH="/usr/bin:${PATH}" 
+# ENV PATH="/usr/bin:${PATH}" 
 
 # Install Cargo, build tool for the Rust parts of IDeSyDe
 #! set version!!!
@@ -44,17 +44,20 @@ RUN wget -c https://github.com/MiniZinc/MiniZincIDE/releases/download/${MINIZINC
 ENV PATH="${PATH}:/MiniZincIDE-${MINIZINC_VERSION}-bundle-linux-x86_64/bin"
 
 # Set the working directory
-ENV ROOT_DIR /app
-COPY . /app
+ENV ROOT_DIR=/app
+ADD https://github.com/forsyde/IDeSyDe.git#develop /IDeSyDe
 
-WORKDIR /app/IDeSyDe
+WORKDIR /IDeSyDe
 
 RUN cargo build --release
 RUN cp ./target/release/idesyde-orchestration idesyde
 RUN sbt publishModules
-RUN ./gradlew publishModules
+RUN gradle publishModules
 
-# ENTRYPOINT [ "./idesyde" ]
+RUN apt-get purge -y wget curl apt-transport-https gnupg unzip zip && \
+    apt-get autoremove -y
+
+ENTRYPOINT [ "./idesyde" ]
 
 
 

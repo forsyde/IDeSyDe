@@ -249,6 +249,94 @@ public record IndependentPeriodicTasks(
 }
 ```
 
+Like the design model, it is important to define the elements that have been partially identified with this decision model.
+This is done through the method `part` which is very similar to `elements` for design models:
+
+```
+...
+@Override
+public Set<String> part() {
+    HashSet<String> elems = new HashSet<>();
+    tasks.forEach(task -> elems.add(task));
+    return elems;
+}
+...
+```
+
+Which now returns the names of the tasks that this decision model contains.
+Now we know that correctly implemented identification rules identifying `IdenpendentPeriodicTasks` from `AmaltheaDesignModel` should at least
+have the names of their tasks matching, since the task names in `IdenpendentPeriodicTasks` are expected to come from the ones present in `AmaltheaDesignModel`.
+
+### Identification rule (revisited)
+
+Having both a design model and a decision model that are concrete in Java, we can actually develop the identification rule [started earlier](#identification-rules).
+We will describe the changes step-wise. First, we need to make sure that we filter the correct design models and create `AmaltheaDesignModel` out of any `OpaqueDesignModel`s:
+
+```
+...
+Set<AmaltheaDesignModel> amaltheaModels = new HashSet<>();
+Set<String> messages = new HashSet<>();
+for (var m : designModels) {
+    if (m instanceof AmaltheaDesignModel amalthea) {
+        amaltheaModels.add(amalthea);
+    } else if (m instanceof OpaqueDesignModel opaque) {
+        if (opaque.category() == "AmaltheaDesignModel" || opaque.format() == "amxmi") {
+            // continued next
+        }
+    }
+}
+...
+```
+
+The logic to transform an opaque design model into an `AmaltheaDesignModel` requires using the `Amalthea` utilities to read a string serialized model.
+Due to how [EMF](https://eclipse.dev/modeling/emf/) is structured, we have to load the serialized model in a `Resource` first so that the string can be converted in-memory.
+
+```
+...
+if (opaque.category() == "AmaltheaDesignModel" || opaque.format() == "amxmi") {
+    opaque.asString().ifPresent(model -> {
+        final AmaltheaResourceFactory amaltheaResourceFactory = new AmaltheaResourceFactory();
+        final Resource res = amaltheaResourceFactory
+                .createResource(URI.createURI("inmemory_amxmi.amxmi"));
+        InputStream stream = new ByteArrayInputStream(model.getBytes(StandardCharsets.UTF_8));
+        try {
+            res.load(stream, res.getResourceSet().getLoadOptions());
+            Amalthea amaltheaModel = (Amalthea) res.getContents().get(0);
+            amaltheaModels.add(new AmaltheaDesignModel(amaltheaModel));
+        } catch (IOException e) {
+            messages.add(e.getMessage());
+        }
+    });
+}
+...
+```
+
+With this code, we have the `AmaltheaDesignModel`s ready for use after the outer-most `for`.
+So, let us use it to find out what are the parameters for the decision model we aim to identify in this identification rule: `IndependentPeriodicTasks`.
+
+```
+...
+List<String> tasks = new ArrayList<>();
+List<Double> periods = new ArrayList<>();
+List<Double> relativeDeadlines = new ArrayList<>();
+List<Double> offsets = new ArrayList<>();
+for (var m : amaltheaModels) {
+    m.amaltheaModel().getSwModel().getTasks().forEach(task -> {
+        tasks.add(task.getName());
+        periods.add(0.0);
+        relativeDeadlines.add(0.0);
+        offsets.add(0.0);
+    });
+}
+...
+```
+
+where the `0.0` are left there simply as place holders until we further develop the required logic.
+
+------
+
+(partial tutorial ends here)
+
 ## Rust embedded module
 
 TBD

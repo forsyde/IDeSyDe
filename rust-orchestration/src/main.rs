@@ -153,6 +153,7 @@ fn main() {
         // let mut hasher = sha3::Sha3_224::new();
         let mut sorted_inputs = args.inputs.clone();
         sorted_inputs.sort();
+        debug!("Using input(s): {:?}", sorted_inputs);
         // for input in &sorted_inputs {
         //     if let Ok(f) = fs::read(input) {
         //         hasher.update(f.as_slice());

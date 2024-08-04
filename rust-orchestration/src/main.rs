@@ -306,6 +306,7 @@ fn main() {
                 }
             })
             .collect();
+        debug!("Read and prepared {} input design model(s)", design_models.len());
         for m in &design_models {
             m.write_to_dir(&inputs_path, "input", "Orchestratror");
         }

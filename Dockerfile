@@ -1,5 +1,15 @@
 # syntax=docker/dockerfile:labs
 FROM debian:bookworm-slim
+
+# This file is used to build the Docker image for the IDeSyDe project.
+# Currently, it can only run on Linux Docker but not on Windows. This is
+# because the MiniZinc installation uses a linux zip.
+#
+# When running the container, a volume must be mounted inside the container and
+# paths _inside_ the container must be used as file arguments to IDesyDe. If we 
+# want to input a file /a/path/file.fiodl, we must mount the directory /a/path like: 
+# `docker run --rm -t -v /a/path:/IDeSyde/input idesyde /IDeSyDe/input/file.fiodl`
+
 # Set environment variables
 ARG GRADLE_HOME=/opt/gradle
 ARG GRADLE_VERSION=8.1-rc-1
@@ -7,14 +17,13 @@ ARG MINIZINC_VERSION=2.8.5
 ARG OPENJDK_VERSION=17
 
 # Install Java and other necessary packages
+# TODO: set versions
 RUN apt-get update && \
     apt-get install -y build-essential wget curl apt-transport-https gnupg unzip zip git openjdk-${OPENJDK_VERSION}-jdk && \
     apt-get clean
-# For Java
-# ENV PATH="/usr/bin:${PATH}" 
 
 # Install Cargo, build tool for the Rust parts of IDeSyDe
-#! set version!!!
+# TODO: set version
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:$PATH"
 
